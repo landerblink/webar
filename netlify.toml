@@ -1,0 +1,60 @@
+# netlify.toml
+# WebAR (MindAR + A-Frame) production-safe config
+
+[build]
+  publish = "."
+
+# ============================================================
+# HEADERS
+# ============================================================
+[[headers]]
+  for = "/*"
+
+  [headers.values]
+
+    # --------------------------------------------------------
+    # IMPORTANT: DO NOT USE COEP/COOP for A-Frame + MindAR
+    # These break CDN scripts, textures, and camera rendering
+    # --------------------------------------------------------
+
+    # SAFE CONTENT SECURITY POLICY FOR WEBAR
+    Content-Security-Policy = """
+      default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:;
+
+      script-src 'self' 'unsafe-inline' 'unsafe-eval'
+        https://aframe.io
+        https://cdn.jsdelivr.net;
+
+      connect-src 'self'
+        https://aframe.io
+        https://cdn.aframe.io
+        https://cdn.jsdelivr.net
+        https://raw.githubusercontent.com
+        https://threejs.org
+        https://modelviewer.dev
+        blob:;
+
+      img-src 'self' data: blob: https:;
+      media-src 'self' data: blob: https:;
+      font-src 'self' data: https://cdn.aframe.io https://cdn.jsdelivr.net;
+    """
+
+    # Cache static assets (1 week)
+    Cache-Control = "public, max-age=604800, stale-while-revalidate=86400"
+
+# ============================================================
+# HTML SHOULD NOT CACHE (IMPORTANT FOR AR UPDATES)
+# ============================================================
+[[headers]]
+  for = "/*.html"
+
+  [headers.values]
+    Cache-Control = "no-cache"
+
+# ============================================================
+# OPTIONAL: CLEAN SPA REDIRECT
+# ============================================================
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

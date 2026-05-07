@@ -1,0 +1,450 @@
+/* =============================================================
+   styles/ui.css
+   HUD, scene switcher, target banners, reticle, info panel
+   ============================================================= */
+
+
+/* =============================================================
+   MAIN UI WRAPPER
+   Sits on top of the AR canvas; pointer-events only on children.
+   ============================================================= */
+.main-ui {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none; /* children opt-in */
+  display: flex;
+  flex-direction: column;
+}
+
+/* When shown (JS removes .hidden) */
+.main-ui:not(.hidden) {
+  display: flex;
+}
+
+
+/* =============================================================
+   TOP BAR
+   ============================================================= */
+.top-bar {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: calc(var(--safe-top) + 0.75rem) 1rem 0.75rem;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+
+.app-name {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--color-primary);
+  text-shadow: var(--shadow-glow-cyan);
+}
+
+.top-bar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.icon-btn {
+  pointer-events: all;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: rgba(18,18,26,0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: var(--color-text);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.icon-btn:active {
+  transform: scale(0.9);
+  background: var(--color-surface2);
+}
+
+
+/* =============================================================
+   SCENE SWITCHER — bottom tab bar
+   ============================================================= */
+.scene-switcher {
+  pointer-events: all;
+  position: absolute;
+  bottom: calc(var(--safe-bottom) + 1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(12,12,18,0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  padding: 0.35rem;
+}
+
+.scene-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-med);
+  letter-spacing: 0.04em;
+}
+
+.scene-tab.active {
+  background: var(--color-primary);
+  color: #000;
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+/* Scene 2 gets purple accent when active */
+.scene-tab[data-scene="scene2"].active {
+  background: var(--color-purple);
+  color: #fff;
+  box-shadow: var(--shadow-glow-purple);
+}
+
+.scene-tab:active {
+  transform: scale(0.94);
+}
+
+.tab-icon {
+  font-size: 1rem;
+}
+
+.tab-label {
+  display: inline;
+}
+
+
+/* =============================================================
+   TARGET BANNERS (found / lost)
+   ============================================================= */
+.target-banner {
+  pointer-events: none;
+  position: absolute;
+  top: calc(var(--safe-top) + 80px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-20px);
+  background: rgba(0,229,255,0.15);
+  border: 1px solid rgba(0,229,255,0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--radius-full);
+  padding: 0.45rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  letter-spacing: 0.04em;
+  opacity: 0;
+  transition: all var(--transition-med);
+  white-space: nowrap;
+}
+
+.target-banner:not(.hidden) {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.target-banner.target-lost {
+  background: rgba(255,107,53,0.12);
+  border-color: rgba(255,107,53,0.3);
+  color: var(--color-secondary);
+}
+
+.banner-icon {
+  font-size: 1rem;
+}
+
+/* Scene 2 banner styling override */
+.target-banner.scene2-found {
+  background: rgba(168,85,247,0.15);
+  border-color: rgba(168,85,247,0.35);
+  color: var(--color-purple);
+}
+
+
+/* =============================================================
+   SCAN RETICLE (shown when no target found)
+   ============================================================= */
+.scan-hint {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  transition: opacity var(--transition-slow);
+}
+
+/* JS adds .fade class to fade this out when target is found */
+.scan-hint.fade {
+  opacity: 0;
+}
+
+.reticle {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+
+.reticle-corner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-color: var(--color-primary);
+  border-style: solid;
+  opacity: 0.8;
+  animation: reticle-pulse 2s ease-in-out infinite;
+}
+
+.reticle-corner.tl {
+  top: 0; left: 0;
+  border-width: 3px 0 0 3px;
+  border-radius: 4px 0 0 0;
+}
+.reticle-corner.tr {
+  top: 0; right: 0;
+  border-width: 3px 3px 0 0;
+  border-radius: 0 4px 0 0;
+  animation-delay: 0.25s;
+}
+.reticle-corner.bl {
+  bottom: 0; left: 0;
+  border-width: 0 0 3px 3px;
+  border-radius: 0 0 0 4px;
+  animation-delay: 0.5s;
+}
+.reticle-corner.br {
+  bottom: 0; right: 0;
+  border-width: 0 3px 3px 0;
+  border-radius: 0 0 4px 0;
+  animation-delay: 0.75s;
+}
+
+@keyframes reticle-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1; transform: scale(1.08); }
+}
+
+.hint-text {
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+
+/* =============================================================
+   INFO PANEL (slide-up drawer)
+   ============================================================= */
+.info-panel {
+  pointer-events: all;
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 1.5rem 1.5rem calc(var(--safe-bottom) + 1.5rem);
+  transform: translateY(100%);
+  transition: transform var(--transition-slow);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.info-panel::-webkit-scrollbar { display: none; }
+
+.info-panel:not(.hidden) {
+  transform: translateY(0);
+  display: block;
+}
+
+.info-panel h3 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-muted);
+  margin-bottom: 0.75rem;
+  margin-top: 1rem;
+}
+
+.info-panel h3:first-of-type {
+  margin-top: 0;
+}
+
+.info-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  counter-reset: info-counter;
+}
+
+.info-list li {
+  counter-increment: info-counter;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.info-list li::before {
+  content: counter(info-counter);
+  min-width: 22px;
+  height: 22px;
+  background: var(--color-primary);
+  color: #000;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.target-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.target-card {
+  background: var(--color-surface2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  font-size: 0.85rem;
+}
+
+.target-card strong {
+  display: block;
+  color: var(--color-primary);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.25rem;
+}
+
+.target-card p {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.close-btn {
+  pointer-events: all;
+  position: absolute;
+  top: 1rem; right: 1rem;
+  width: 30px; height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-surface2);
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* =============================================================
+   TAP RIPPLE EFFECT (JS injects this element)
+   ============================================================= */
+.tap-ripple {
+  position: fixed;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(0,229,255,0.3);
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  animation: ripple-out 0.5s ease-out forwards;
+  z-index: 200;
+}
+
+@keyframes ripple-out {
+  to { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+
+/* =============================================================
+   TRANSITION WIPE (between scenes)
+   ============================================================= */
+.scene-transition {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.scene-transition.in  { opacity: 1; pointer-events: all; }
+.scene-transition.out { opacity: 0; pointer-events: none; }
+
+
+/* =============================================================
+   RESPONSIVE TWEAKS
+   ============================================================= */
+
+/* Larger phones / small tablets */
+@media (min-width: 430px) {
+  .loading-title { font-size: 2.2rem; }
+  .scene-tab { padding: 0.6rem 1.4rem; font-size: 0.88rem; }
+  .reticle { width: 160px; height: 160px; }
+  .reticle-corner { width: 28px; height: 28px; }
+}
+
+/* Landscape orientation */
+@media (orientation: landscape) {
+  .scene-switcher {
+    bottom: calc(var(--safe-bottom) + 0.5rem);
+  }
+  .scan-hint {
+    top: 55%;
+  }
+  .info-panel {
+    max-height: 90vh;
+    left: auto;
+    right: 0;
+    bottom: 0;
+    width: min(400px, 55vw);
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    border-top: none;
+    border-left: 1px solid var(--color-border);
+    transform: translateX(100%);
+    max-height: 100vh;
+  }
+  .info-panel:not(.hidden) {
+    transform: translateX(0);
+  }
+}

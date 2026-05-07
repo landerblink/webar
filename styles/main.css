@@ -1,0 +1,279 @@
+/* =============================================================
+   styles/main.css
+   Base resets, variables, loading screen, overlays
+   ============================================================= */
+
+/* ── CSS Custom Properties ─────────────────────────────────── */
+:root {
+  --color-bg:          #0a0a0f;
+  --color-surface:     #12121a;
+  --color-surface2:    #1e1e2e;
+  --color-border:      rgba(255,255,255,0.08);
+
+  --color-primary:     #00e5ff;   /* cyan accent */
+  --color-secondary:   #ff6b35;  /* orange accent */
+  --color-purple:      #a855f7;  /* scene 2 accent */
+  --color-text:        #e2e8f0;
+  --color-muted:       #94a3b8;
+
+  --radius-sm:  8px;
+  --radius-md:  14px;
+  --radius-lg:  22px;
+  --radius-full: 9999px;
+
+  --shadow-glow-cyan:   0 0 24px rgba(0,229,255,0.35);
+  --shadow-glow-orange: 0 0 24px rgba(255,107,53,0.35);
+  --shadow-glow-purple: 0 0 24px rgba(168,85,247,0.35);
+
+  --font-display: 'Courier New', 'Lucida Console', monospace;
+  --font-body:    system-ui, -apple-system, sans-serif;
+
+  --transition-fast: 150ms cubic-bezier(0.4,0,0.2,1);
+  --transition-med:  300ms cubic-bezier(0.4,0,0.2,1);
+  --transition-slow: 500ms cubic-bezier(0.4,0,0.2,1);
+
+  /* Safe area insets for iPhone notch / home bar */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left:   env(safe-area-inset-left, 0px);
+  --safe-right:  env(safe-area-inset-right, 0px);
+}
+
+/* ── Reset ─────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* A-Frame canvas should fill the screen */
+a-scene {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+/* ── Utility ────────────────────────────────────────────────── */
+.hidden { display: none !important; }
+.invisible { visibility: hidden !important; opacity: 0 !important; }
+
+
+/* =============================================================
+   LOADING SCREEN
+   Full-screen overlay shown while 8th Wall initialises.
+   ============================================================= */
+.loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--color-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  /* subtle noise texture */
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(0,229,255,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(168,85,247,0.06) 0%, transparent 60%);
+}
+
+.loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+}
+
+/* Animated logo rings */
+.loading-logo {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 0.5rem;
+}
+
+.logo-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-primary);
+  opacity: 0.6;
+  animation: spin-ring 2s linear infinite;
+}
+
+.logo-ring.ring-2 {
+  inset: 12px;
+  border-color: var(--color-purple);
+  animation-duration: 3.2s;
+  animation-direction: reverse;
+}
+
+.logo-dot {
+  position: absolute;
+  inset: 28px;
+  background: var(--color-primary);
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+@keyframes spin-ring {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-dot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%       { transform: scale(0.7); opacity: 0.5; }
+}
+
+/* Title */
+.loading-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.loading-title span {
+  color: var(--color-primary);
+  display: block;
+  font-size: 0.9em;
+  letter-spacing: 0.2em;
+}
+
+.loading-subtitle {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+/* Progress bar */
+.loading-bar-wrap {
+  width: 100%;
+  height: 3px;
+  background: var(--color-surface2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.loading-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-purple));
+  border-radius: var(--radius-full);
+  transition: width var(--transition-med);
+  box-shadow: 0 0 8px var(--color-primary);
+}
+
+.loading-tip {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  opacity: 0.7;
+}
+
+/* Fade out loading screen */
+.loading-screen.fade-out {
+  animation: fade-out-screen 0.6s ease forwards;
+}
+
+@keyframes fade-out-screen {
+  to { opacity: 0; pointer-events: none; }
+}
+
+
+/* =============================================================
+   OVERLAYS (camera permission, error)
+   ============================================================= */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.overlay-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.overlay-icon {
+  font-size: 3rem;
+}
+
+.overlay-card h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.overlay-card p {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+/* Buttons */
+.btn {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.04em;
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: #000;
+}
+
+.btn-primary:active {
+  transform: scale(0.96);
+  box-shadow: var(--shadow-glow-cyan);
+}
+
+.btn-secondary {
+  background: var(--color-surface2);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn-secondary:active {
+  transform: scale(0.96);
+}

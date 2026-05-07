@@ -1,0 +1,14 @@
+# Asset Replacement Guide
+# Place your own .glb files in this folder.
+# Then update the src="" attributes in index.html <a-assets>.
+
+# Target A model  → assets/models/target-a-model.glb
+# Target B model  → assets/models/target-b-model.glb
+# Target C model  → assets/models/target-c-model.glb
+# Sound found     → assets/audio/found.mp3
+# Sound lost      → assets/audio/lost.mp3
+
+# Image targets (downloaded from 8th Wall console as reference images):
+# target-a.jpg  → assets/images/target-a.jpg
+# target-b.jpg  → assets/images/target-b.jpg
+# target-c.jpg  → assets/images/target-c.jpg
