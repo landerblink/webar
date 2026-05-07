@@ -221,9 +221,12 @@
     autoStart: true;
     uiLoading: no;
     uiError: no;
-    uiScanning: no
+    uiScanning: no;
+    maxTrack: 1;
+    filterMinCF: 0.001;
+    filterBeta: 0.01;
+    warmupTolerance: 5;
   "
-      renderer="colorManagement: true; physicallyCorrectLights: true"
       vr-mode-ui="enabled: false"
     >
       <!-- =========================================================
@@ -545,5 +548,22 @@
     <script src="scripts/ar-components.js"></script>
     <script src="scripts/ui.js"></script>
     <script src="scripts/main.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: "environment",
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+            },
+          });
+
+          console.log("Camera initialized (manual test)", stream);
+        } catch (err) {
+          console.warn("Camera test failed:", err);
+        }
+      });
+    </script>
   </body>
 </html>
