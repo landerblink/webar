@@ -5,90 +5,89 @@
    ============================================================= */
 
 const APP_CONFIG = {
-
   // ── App identity ──────────────────────────────────────────
-  appName: 'WebAR Experience',
-  version: '1.0.0',
+  appName: "WebAR Experience",
+  version: "1.0.0",
 
   // ── Debug mode ────────────────────────────────────────────
-  // Set true during development to see console.log output.
-  // Set false before publishing.
+  // Set true during development; false before publishing.
   debug: true,
 
   // ── Scenes ────────────────────────────────────────────────
-  // Each scene maps to a group of image targets.
-  // 'id' must match the data-scene attribute on HTML entities.
-  // 'groupId' must match the <a-entity> id in index.html.
+  // 'id' must match data-scene on image-target entities.
+  // 'tabId' must match the id on the <button> in HTML.
+  // 'accent' is used for UI colour theming.
   scenes: [
     {
-      id:       'scene1',
-      label:    'Scene 1',
-      groupId:  'scene1-group',
-      tabId:    'tab-scene1',
-      accent:   '#00e5ff',
+      id: "scene1",
+      label: "Scene 1",
+      tabId: "tab-scene1",
+      accent: "#00e5ff",
     },
     {
-      id:       'scene2',
-      label:    'Scene 2',
-      groupId:  'scene2-group',
-      tabId:    'tab-scene2',
-      accent:   '#a855f7',
+      id: "scene2",
+      label: "Scene 2",
+      tabId: "tab-scene2",
+      accent: "#a855f7",
     },
   ],
 
   // ── Image Targets ─────────────────────────────────────────
-  // 'id' must exactly match the `name` attribute in the
-  // xrweb-image-target component AND the name in 8th Wall console.
+  // 'id'       → must match data-target on the <a-entity>
+  // 'scene'    → must match a scene id above
+  // 'entityId' → must match the id of the <a-entity mindar-image-target>
+  // 'showOnFound' → ids of child elements to toggle visible on found/lost
   targets: [
     {
-      id:          'target-a',
-      scene:       'scene1',
-      label:       'Target A — Astronaut',
-      entityId:    'target-a-entity',
-      // IDs of child elements to show/hide on found/lost
-      showOnFound: ['model-a', 'text-a', 'subtext-a', 'glow-a'],
+      id: "target-a",
+      scene: "scene1",
+      label: "Target A — Astronaut",
+      entityId: "target-a-entity",
+      showOnFound: ["model-a", "text-a", "subtext-a", "glow-a"],
     },
     {
-      id:          'target-b',
-      scene:       'scene1',
-      label:       'Target B — Horse',
-      entityId:    'target-b-entity',
-      showOnFound: ['model-b', 'text-b', 'desc-b', 'ring-b'],
+      id: "target-b",
+      scene: "scene1",
+      label: "Target B — Horse",
+      entityId: "target-b-entity",
+      showOnFound: ["model-b", "text-b", "desc-b", "ring-b"],
     },
     {
-      id:          'target-c',
-      scene:       'scene2',
-      label:       'Target C — Explorer',
-      entityId:    'target-c-entity',
-      showOnFound: ['model-c', 'glow-rings-c', 'particles-c', 'text-c', 'subtext-c'],
+      id: "target-c",
+      scene: "scene2",
+      label: "Target C — Explorer",
+      entityId: "target-c-entity",
+      showOnFound: [
+        "model-c",
+        "glow-rings-c",
+        "particles-c",
+        "text-c",
+        "subtext-c",
+      ],
     },
   ],
 
-  // ── Animations ────────────────────────────────────────────
-  // Target B scale-in animation parameters
-  scaleInDuration: 500,   // ms
-  scaleInTarget:  '0.35 0.35 0.35',
-  scaleOutTarget: '0 0 0',
+  // ── Target B scale animation ──────────────────────────────
+  scaleInDuration: 500, // ms
+  scaleInTarget: "0.35 0.35 0.35",
+  scaleOutTarget: "0 0 0",
 
   // ── Audio ─────────────────────────────────────────────────
-  // ✏️  REPLACE with real audio IDs from <a-assets> to enable
-  audioEnabled:  false,
-  sfxFound:      null,   // e.g. '#sfx-found'
-  sfxLost:       null,
+  audioEnabled: false,
+  sfxFound: null,
+  sfxLost: null,
 
   // ── Loading bar ───────────────────────────────────────────
-  // Simulated progress milestones (0–100)
   loadingMilestones: [10, 30, 55, 80, 100],
-  loadingInterval:   400,   // ms between milestone steps
+  loadingInterval: 400, // ms between milestone steps
 
   // ── UI timings ────────────────────────────────────────────
-  bannerHideDuration:  3000,  // auto-hide target-found banner after N ms
-  sceneTransitionDur:  400,   // ms for wipe transition between scenes
+  bannerHideDuration: 3000, // ms
+  sceneTransitionDur: 400, // ms
 };
 
-// Export for module-style access (no bundler needed — plain globals)
 window.APP_CONFIG = APP_CONFIG;
 
 if (APP_CONFIG.debug) {
-  console.log('[Config] Loaded:', APP_CONFIG);
+  console.log("[Config] Loaded:", APP_CONFIG);
 }

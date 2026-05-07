@@ -13,7 +13,7 @@
       content="black-translucent"
     />
     <title>WebAR Experience</title>
-    <!-- ============================================================ EXTERNAL LIBRARIES MindAR — free open-source image tracking (replaces 8th Wall) A-Frame — WebXR/WebGL 3D framework No API key required. No account required. ============================================================ -->
+
     <!-- A-Frame -->
     <script
       src="https://aframe.io/releases/1.6.0/aframe.min.js"
@@ -24,17 +24,19 @@
       src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"
       crossorigin="anonymous"
     ></script>
-    <!-- A-Frame Extras -->
+    <!-- A-Frame Extras (animation-mixer) -->
     <script
       src="https://cdn.jsdelivr.net/gh/c-frame/aframe-extras@7.2.0/dist/aframe-extras.min.js"
       crossorigin="anonymous"
     ></script>
-    <!-- Project Stylesheets -->
+
     <link rel="stylesheet" href="styles/main.css" />
     <link rel="stylesheet" href="styles/ui.css" />
   </head>
   <body>
-    <!-- ============================================================ LOADING SCREEN Shown while MindAR + camera initialises. Hidden automatically once AR is ready (see scripts/ui.js). ============================================================ -->
+    <!-- ============================================================
+         LOADING SCREEN
+    ============================================================ -->
     <div id="loading-screen" class="loading-screen">
       <div class="loading-inner">
         <div class="loading-logo">
@@ -52,7 +54,10 @@
         </p>
       </div>
     </div>
-    <!-- ============================================================ CAMERA PERMISSION OVERLAY Shown when the browser blocks camera access. ============================================================ -->
+
+    <!-- ============================================================
+         CAMERA PERMISSION OVERLAY
+    ============================================================ -->
     <div id="camera-permission-overlay" class="overlay hidden">
       <div class="overlay-card">
         <div class="overlay-icon">📷</div>
@@ -62,11 +67,14 @@
           allow camera access when prompted.
         </p>
         <button id="retry-camera-btn" class="btn btn-primary">
-          Allow Camera & Retry
+          Allow Camera &amp; Retry
         </button>
       </div>
     </div>
-    <!-- ============================================================ ERROR OVERLAY Generic fallback for unsupported browsers / WebGL errors. ============================================================ -->
+
+    <!-- ============================================================
+         ERROR OVERLAY
+    ============================================================ -->
     <div id="error-overlay" class="overlay hidden">
       <div class="overlay-card">
         <div class="overlay-icon">⚠️</div>
@@ -80,7 +88,10 @@
         </button>
       </div>
     </div>
-    <!-- ============================================================ MAIN UI OVERLAY Scene selector, info panel, target-found banner. Always rendered on top of the AR canvas. ============================================================ -->
+
+    <!-- ============================================================
+         MAIN UI OVERLAY
+    ============================================================ -->
     <div id="main-ui" class="main-ui hidden">
       <!-- Top Bar -->
       <div class="top-bar">
@@ -104,7 +115,8 @@
           </button>
         </div>
       </div>
-      <!-- Scene Switcher — bottom tab bar -->
+
+      <!-- Scene Switcher -->
       <div class="scene-switcher">
         <button class="scene-tab active" data-scene="scene1" id="tab-scene1">
           <span class="tab-icon">🌐</span>
@@ -115,16 +127,20 @@
           <span class="tab-label">Scene 2</span>
         </button>
       </div>
-      <!-- Target-Found Banner (slides in when a target is detected) -->
+
+      <!-- Target-Found Banner -->
       <div id="target-banner" class="target-banner hidden">
         <span class="banner-icon">🎯</span>
         <span id="target-banner-text">Target detected!</span>
       </div>
+
       <!-- Target-Lost Banner -->
       <div id="target-lost-banner" class="target-banner target-lost hidden">
-        <span class="banner-icon">🔍</span> <span>Searching for target…</span>
+        <span class="banner-icon">🔍</span>
+        <span>Searching for target…</span>
       </div>
-      <!-- Info Panel (slide-up drawer) -->
+
+      <!-- Info Panel -->
       <div id="info-panel" class="info-panel hidden">
         <button id="close-info-btn" class="close-btn">✕</button>
         <h3>How to use</h3>
@@ -138,7 +154,7 @@
         <div class="target-cards">
           <div class="target-card">
             <strong>Scene 1 — Target A</strong>
-            <p>Rotating 3D object + title text (index 0)</p>
+            <p>Rotating astronaut + title text (index 0)</p>
           </div>
           <div class="target-card">
             <strong>Scene 1 — Target B</strong>
@@ -146,11 +162,12 @@
           </div>
           <div class="target-card">
             <strong>Scene 2 — Target C</strong>
-            <p>Animated model + glow effect (index 2)</p>
+            <p>Animated model + glow rings (index 2)</p>
           </div>
         </div>
       </div>
-      <!-- Reticle hint (shown when no target found yet) -->
+
+      <!-- Scan reticle -->
       <div id="scan-hint" class="scan-hint">
         <div class="reticle">
           <div class="reticle-corner tl"></div>
@@ -161,278 +178,277 @@
         <p class="hint-text">Scan an image target</p>
       </div>
     </div>
-    <!-- /main-ui -->
-    <!-- ============================================================ A-FRAME AR SCENE — MindAR version HOW IMAGE TARGETS WORK WITH MindAR: ───────────────────────────────────────────────────────── 1. Go to: https://hiukim.github.io/mind-ar-js-doc/tools/compile 2. Upload your 3 target images IN ORDER: slot 0 → Target A image slot 1 → Target B image slot 2 → Target C image 3. Click "Start" — download the generated "targets.mind" file 4. Place it at: assets/targets.mind 5. Each <a-entity mindar-image-target="targetIndex: N"> below corresponds to that slot number (0, 1, 2) ✏️ REPLACE imageTargetSrc if you move or rename the .mind file ============================================================ -->
+
+    <!-- ============================================================
+         A-FRAME AR SCENE
+
+         ⚠️  CRITICAL MindAR RULE:
+         mindar-image-target entities MUST be DIRECT children of
+         <a-scene>. Wrapping them in any parent <a-entity> breaks
+         tracking completely — targets will never fire.
+
+         ✏️  targets.mind path:
+         Place your compiled targets.mind at:  assets/targets.mind
+         Or update imageTargetSrc below to match your actual path.
+
+         ✏️  Target index order:
+         The targetIndex matches the ORDER you uploaded images to:
+         https://hiukim.github.io/mind-ar-js-doc/tools/compile
+           slot 0 → Target A image
+           slot 1 → Target B image
+           slot 2 → Target C image
+    ============================================================ -->
     <a-scene
       id="ar-scene"
-      mindar-image=" imageTargetSrc: assets/targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no; maxTrack: 1; filterMinCF: 0.001; filterBeta: 0.01; warmupTolerance: 5; "
+      mindar-image="
+        imageTargetSrc: assets/targets.mind;
+        autoStart: true;
+        uiLoading: no;
+        uiError: no;
+        uiScanning: no;
+        maxTrack: 1;
+        filterMinCF: 0.001;
+        filterBeta: 0.01;
+        warmupTolerance: 1;
+        missTolerance: 5;
+      "
+      embedded
       vr-mode-ui="enabled: false"
+      renderer="logarithmicDepthBuffer: true; colorManagement: true;"
     >
-      <!-- ========================================================= REQUIRED: MindAR needs an <a-camera> as a direct child look-controls must be disabled — MindAR controls the camera =========================================================== -->
+      <!-- Camera — look-controls MUST be disabled for MindAR -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <!-- ========================================================= ASSETS — preloaded before scene starts ✏️ REPLACE: swap src URLs with your own GLB / texture paths =========================================================== -->
+
+      <!-- =========================================================
+           ASSETS
+      ========================================================== -->
       <a-assets timeout="30000">
-        <!-- ── Scene 1 / Target A (index 0) ──────────────────────── -->
-        <!-- FREE ASSET: "Astronaut" by Google (CC-BY) ✏️ REPLACE src with your own .glb file path or URL -->
+        <!-- Scene 1 / Target A (index 0) — Astronaut -->
         <a-asset-item
           id="model-astronaut"
           src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-          response-type="arraybuffer"
         ></a-asset-item>
-        <!-- ── Scene 1 / Target B (index 1) ──────────────────────── -->
-        <!-- FREE ASSET: "Horse" from Three.js examples (CC0) ✏️ REPLACE src with your own .glb file path or URL -->
+        <!-- Scene 1 / Target B (index 1) — Horse -->
         <a-asset-item
           id="model-horse"
           src="https://threejs.org/examples/models/gltf/Horse.glb"
-          response-type="arraybuffer"
         ></a-asset-item>
-        <!-- ── Scene 2 / Target C (index 2) ──────────────────────── -->
-        <!-- FREE ASSET: "Cesium Man" walking animation (CC-BY) ✏️ REPLACE src with your own animated .glb file path or URL -->
+        <!-- Scene 2 / Target C (index 2) — Cesium Man -->
         <a-asset-item
           id="model-cesium"
           src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb"
-          response-type="arraybuffer"
         ></a-asset-item>
-        <!-- ✏️ AUDIO: uncomment to preload sound effects <audio id="sfx-found" src="assets/audio/found.mp3" preload="auto"></audio> <audio id="sfx-lost" src="assets/audio/lost.mp3" preload="auto"></audio> --> </a-assets
-      ><!-- /a-assets -->
-      <!-- ========================================================= LIGHTING — affects all 3D objects in the scene =========================================================== -->
+      </a-assets>
+
+      <!-- Lighting -->
       <a-entity
-        light="type: ambient; color: #ffffff; intensity: 0.6"
+        light="type: ambient; color: #ffffff; intensity: 0.8"
       ></a-entity>
       <a-entity
-        light="type: directional; color: #ffffff; intensity: 1.2; castShadow: true"
+        light="type: directional; color: #ffffff; intensity: 1.2"
         position="1 4 2"
       ></a-entity>
-      <!-- ========================================================= SCENE 1 IMAGE TARGETS Visible when Scene 1 tab is active. MindAR note: mindar-image-target uses targetIndex (number), NOT a name string like 8th Wall did. Index = position in the .mind file (0-based). =========================================================== -->
-      <a-entity id="scene1-group">
-        <!-- ── Target A — targetIndex: 0 ───────────────────────── -->
-        <!-- This entity tracks the FIRST image you uploaded to the compiler. ✏️ Change targetIndex if you reorder images in the .mind file. ✏️ Change gltf-model="#model-astronaut" to swap the 3D model. -->
+
+      <!-- =========================================================
+           TARGET A — targetIndex: 0  (Scene 1)
+           ⚠️ Must be a DIRECT child of <a-scene>
+      ========================================================== -->
+      <a-entity
+        id="target-a-entity"
+        mindar-image-target="targetIndex: 0"
+        class="image-target"
+        data-target="target-a"
+        data-scene="scene1"
+      >
+        <!-- Floating + rotating astronaut -->
         <a-entity
-          id="target-a-entity"
-          mindar-image-target="targetIndex: 0"
-          class="image-target"
-          data-target="target-a"
-          data-scene="scene1"
-        >
-          <!-- Animated 3D Model — floats up/down and rotates -->
-          <a-entity
-            id="model-a"
-            gltf-model="#model-astronaut"
-            class="ar-object"
-            position="0 0.15 0"
-            scale="0.4 0.4 0.4"
-            animation-mixer
-            animation__rotate="property: rotation; to: 0 360 0; dur: 6000; loop: true; easing: linear"
-            animation__float="property: position; from: 0 0.10 0; to: 0 0.25 0; dur: 2000; loop: true; dir: alternate; easing: easeInOutSine"
-            visible="false"
-          ></a-entity>
-          <!-- Title text above the model -->
-          <a-text
-            id="text-a"
-            value="ASTRONAUT"
-            align="center"
-            color="#00e5ff"
-            width="1.2"
-            position="0 0.55 0"
-            font="https://cdn.aframe.io/fonts/Exo2Bold.fnt"
-            visible="false"
-          ></a-text>
-          <!-- Sub-label -->
-          <a-text
-            id="subtext-a"
-            value="Tap to interact"
-            align="center"
-            color="#ffffff"
-            width="0.8"
-            opacity="0.7"
-            position="0 0.44 0"
-            visible="false"
-          ></a-text>
-          <!-- Glow circle under the model -->
-          <a-circle
-            id="glow-a"
-            radius="0.18"
-            rotation="-90 0 0"
-            position="0 0.005 0"
-            color="#00e5ff"
-            opacity="0.15"
-            visible="false"
-            animation__pulse="property: opacity; from: 0.1; to: 0.3; dur: 1500; loop: true; dir: alternate"
-          ></a-circle> </a-entity
-        ><!-- /target-a-entity -->
-        <!-- ── Target B — targetIndex: 1 ───────────────────────── -->
-        <!-- This entity tracks the SECOND image you uploaded to the compiler. ✏️ Change targetIndex if you reorder images in the .mind file. ✏️ Change gltf-model="#model-horse" to swap the 3D model. -->
+          id="model-a"
+          gltf-model="#model-astronaut"
+          class="ar-object"
+          position="0 0.15 0"
+          scale="0.4 0.4 0.4"
+          animation-mixer
+          animation__rotate="property: rotation; to: 0 360 0; dur: 6000; loop: true; easing: linear"
+          animation__float="property: position; from: 0 0.10 0; to: 0 0.25 0; dur: 2000; loop: true; dir: alternate; easing: easeInOutSine"
+          visible="false"
+        ></a-entity>
+        <a-text
+          id="text-a"
+          value="ASTRONAUT"
+          align="center"
+          color="#00e5ff"
+          width="1.2"
+          position="0 0.55 0"
+          visible="false"
+        ></a-text>
+        <a-text
+          id="subtext-a"
+          value="Tap to interact"
+          align="center"
+          color="#ffffff"
+          width="0.8"
+          opacity="0.7"
+          position="0 0.44 0"
+          visible="false"
+        ></a-text>
+        <a-circle
+          id="glow-a"
+          radius="0.18"
+          rotation="-90 0 0"
+          position="0 0.005 0"
+          color="#00e5ff"
+          opacity="0.15"
+          visible="false"
+          animation__pulse="property: opacity; from: 0.1; to: 0.3; dur: 1500; loop: true; dir: alternate"
+        ></a-circle>
+      </a-entity>
+
+      <!-- =========================================================
+           TARGET B — targetIndex: 1  (Scene 1)
+           ⚠️ Must be a DIRECT child of <a-scene>
+      ========================================================== -->
+      <a-entity
+        id="target-b-entity"
+        mindar-image-target="targetIndex: 1"
+        class="image-target"
+        data-target="target-b"
+        data-scene="scene1"
+      >
+        <!-- Horse — starts at scale 0, scales in on detection -->
         <a-entity
-          id="target-b-entity"
-          mindar-image-target="targetIndex: 1"
-          class="image-target"
-          data-target="target-b"
-          data-scene="scene1"
-        >
-          <!-- 3D Model — starts at scale 0, scales in on detection -->
-          <a-entity
-            id="model-b"
-            gltf-model="#model-horse"
-            class="ar-object"
-            position="0 0.1 0"
-            scale="0 0 0"
-            animation-mixer
-            visible="false"
-          ></a-entity>
-          <!-- Title text -->
-          <a-text
-            id="text-b"
-            value="HORSE"
-            align="center"
-            color="#ff6b35"
-            width="1.2"
-            position="0 0.55 0"
-            visible="false"
-          ></a-text>
-          <!-- Description text -->
-          <a-text
-            id="desc-b"
-            value="An animated 3D model&#10;Tap to scale up!"
-            align="center"
-            color="#ffffff"
-            width="0.9"
-            opacity="0.8"
-            position="0 0.38 0"
-            visible="false"
-          ></a-text>
-          <!-- Spinning glow ring around the target -->
+          id="model-b"
+          gltf-model="#model-horse"
+          class="ar-object"
+          position="0 0.1 0"
+          scale="0 0 0"
+          animation-mixer
+          visible="false"
+        ></a-entity>
+        <a-text
+          id="text-b"
+          value="HORSE"
+          align="center"
+          color="#ff6b35"
+          width="1.2"
+          position="0 0.55 0"
+          visible="false"
+        ></a-text>
+        <a-text
+          id="desc-b"
+          value="An animated 3D model&#10;Tap to scale up!"
+          align="center"
+          color="#ffffff"
+          width="0.9"
+          opacity="0.8"
+          position="0 0.38 0"
+          visible="false"
+        ></a-text>
+        <a-torus
+          id="ring-b"
+          radius="0.18"
+          radius-tubular="0.005"
+          rotation="-90 0 0"
+          color="#ff6b35"
+          opacity="0.6"
+          visible="false"
+          animation__spin="property: rotation; from: -90 0 0; to: -90 360 0; dur: 4000; loop: true; easing: linear"
+        ></a-torus>
+      </a-entity>
+
+      <!-- =========================================================
+           TARGET C — targetIndex: 2  (Scene 2)
+           ⚠️ Must be a DIRECT child of <a-scene>
+      ========================================================== -->
+      <a-entity
+        id="target-c-entity"
+        mindar-image-target="targetIndex: 2"
+        class="image-target"
+        data-target="target-c"
+        data-scene="scene2"
+      >
+        <!-- Walking Cesium Man -->
+        <a-entity
+          id="model-c"
+          gltf-model="#model-cesium"
+          class="ar-object"
+          position="0 0 0"
+          scale="0.35 0.35 0.35"
+          animation-mixer="clip: *; loop: repeat; crossFadeDuration: 0.3"
+          visible="false"
+        ></a-entity>
+        <!-- Layered glow rings -->
+        <a-entity id="glow-rings-c" visible="false">
           <a-torus
-            id="ring-b"
-            radius="0.18"
-            radius-tubular="0.005"
+            radius="0.12"
+            radius-tubular="0.004"
             rotation="-90 0 0"
-            color="#ff6b35"
-            opacity="0.6"
-            visible="false"
-            animation__spin="property: rotation; from: -90 0 0; to: -90 360 0; dur: 4000; loop: true; easing: linear"
-          ></a-torus> </a-entity
-        ><!-- /target-b-entity --> </a-entity
-      ><!-- /scene1-group -->
-      <!-- ========================================================= SCENE 2 IMAGE TARGETS Hidden when Scene 1 is active; shown when Scene 2 is selected. =========================================================== -->
-      <a-entity id="scene2-group" visible="false">
-        <!-- ── Target C — targetIndex: 2 ───────────────────────── -->
-        <!-- This entity tracks the THIRD image you uploaded to the compiler. ✏️ Change targetIndex if you reorder images in the .mind file. ✏️ Change gltf-model="#model-cesium" to swap the 3D model. -->
-        <a-entity
-          id="target-c-entity"
-          mindar-image-target="targetIndex: 2"
-          class="image-target"
-          data-target="target-c"
-          data-scene="scene2"
-        >
-          <!-- Animated walking model -->
-          <a-entity
-            id="model-c"
-            gltf-model="#model-cesium"
-            class="ar-object"
-            position="0 0 0"
-            scale="0.35 0.35 0.35"
-            animation-mixer="clip: *; loop: repeat; crossFadeDuration: 0.3"
-            visible="false"
-          ></a-entity>
-          <!-- Layered glow rings (particle-style effect) -->
-          <a-entity id="glow-rings-c" visible="false">
-            <a-torus
-              radius="0.12"
-              radius-tubular="0.004"
-              rotation="-90 0 0"
-              color="#a855f7"
-              opacity="0.8"
-              animation__spin="property: rotation; from: -90 0 0; to: -90 360 0; dur: 3000; loop: true; easing: linear"
-            >
-            </a-torus>
-            <a-torus
-              radius="0.2"
-              radius-tubular="0.003"
-              rotation="-90 45 0"
-              color="#06b6d4"
-              opacity="0.5"
-              animation__spin="property: rotation; from: -90 45 0; to: -90 405 0; dur: 5000; loop: true; easing: linear"
-            >
-            </a-torus>
-            <a-torus
-              radius="0.28"
-              radius-tubular="0.002"
-              rotation="-90 90 0"
-              color="#f0abfc"
-              opacity="0.3"
-              animation__spin="property: rotation; from: -90 90 0; to: -90 450 0; dur: 7000; loop: true; easing: linear"
-            >
-            </a-torus>
-          </a-entity>
-          <!-- Floating sparkle particles (tiny animated boxes) -->
-          <a-entity id="particles-c" visible="false">
-            <a-box
-              color="#a855f7"
-              scale="0.01 0.01 0.01"
-              position="0.15 0.3 0"
-              animation__float="property: position; from: 0.15 0.25 0; to: 0.15 0.45 0; dur: 2200; loop: true; dir: alternate; easing: easeInOutSine"
-              animation__fade="property: opacity; from: 1; to: 0; dur: 2200; loop: true; dir: alternate"
-            ></a-box>
-            <a-box
-              color="#06b6d4"
-              scale="0.012 0.012 0.012"
-              position="-0.18 0.2 0.05"
-              animation__float="property: position; from: -0.18 0.15 0.05; to: -0.18 0.38 0.05; dur: 1800; loop: true; dir: alternate; easing: easeInOutSine"
-              animation__fade="property: opacity; from: 0.9; to: 0.1; dur: 1800; loop: true; dir: alternate"
-            ></a-box>
-            <a-box
-              color="#f0abfc"
-              scale="0.008 0.008 0.008"
-              position="0.05 0.5 -0.1"
-              animation__float="property: position; from: 0.05 0.45 -0.1; to: 0.05 0.6 -0.1; dur: 2600; loop: true; dir: alternate; easing: easeInOutSine"
-              animation__fade="property: opacity; from: 0.8; to: 0.2; dur: 2600; loop: true; dir: alternate"
-            ></a-box>
-          </a-entity>
-          <!-- Title label -->
-          <a-text
-            id="text-c"
-            value="EXPLORER"
-            align="center"
             color="#a855f7"
-            width="1.2"
-            position="0 0.7 0"
-            visible="false"
-          ></a-text>
-          <!-- Sub-label -->
-          <a-text
-            id="subtext-c"
-            value="Scene 2 activated"
-            align="center"
-            color="#e2e8f0"
-            width="0.85"
-            opacity="0.75"
-            position="0 0.57 0"
-            visible="false"
-          ></a-text> </a-entity
-        ><!-- /target-c-entity --> </a-entity
-      ><!-- /scene2-group --> </a-scene
-    ><!-- /a-scene -->
-    <!-- ============================================================ JAVASCRIPT — load order matters 1. config — all settings in one place 2. scene-manager — scene switching logic 3. ar-components — custom A-Frame components 4. ui — loading screen, overlays, buttons 5. main — bootstrap / entry point ============================================================ -->
+            opacity="0.8"
+            animation__spin="property: rotation; from: -90 0 0; to: -90 360 0; dur: 3000; loop: true; easing: linear"
+          ></a-torus>
+          <a-torus
+            radius="0.2"
+            radius-tubular="0.003"
+            rotation="-90 45 0"
+            color="#06b6d4"
+            opacity="0.5"
+            animation__spin="property: rotation; from: -90 45 0; to: -90 405 0; dur: 5000; loop: true; easing: linear"
+          ></a-torus>
+          <a-torus
+            radius="0.28"
+            radius-tubular="0.002"
+            rotation="-90 90 0"
+            color="#f0abfc"
+            opacity="0.3"
+            animation__spin="property: rotation; from: -90 90 0; to: -90 450 0; dur: 7000; loop: true; easing: linear"
+          ></a-torus>
+        </a-entity>
+        <!-- Floating sparkle particles -->
+        <a-entity id="particles-c" visible="false">
+          <a-box
+            color="#a855f7"
+            scale="0.01 0.01 0.01"
+            position="0.15 0.3 0"
+            animation__float="property: position; from: 0.15 0.25 0; to: 0.15 0.45 0; dur: 2200; loop: true; dir: alternate; easing: easeInOutSine"
+            animation__fade="property: opacity; from: 1; to: 0; dur: 2200; loop: true; dir: alternate"
+          ></a-box>
+          <a-box
+            color="#06b6d4"
+            scale="0.012 0.012 0.012"
+            position="-0.18 0.2 0.05"
+            animation__float="property: position; from: -0.18 0.15 0.05; to: -0.18 0.38 0.05; dur: 1800; loop: true; dir: alternate; easing: easeInOutSine"
+            animation__fade="property: opacity; from: 0.9; to: 0.1; dur: 1800; loop: true; dir: alternate"
+          ></a-box>
+        </a-entity>
+        <a-text
+          id="text-c"
+          value="EXPLORER"
+          align="center"
+          color="#a855f7"
+          width="1.2"
+          position="0 0.7 0"
+          visible="false"
+        ></a-text>
+        <a-text
+          id="subtext-c"
+          value="Scene 2 activated"
+          align="center"
+          color="#e2e8f0"
+          width="0.85"
+          opacity="0.75"
+          position="0 0.57 0"
+          visible="false"
+        ></a-text>
+      </a-entity>
+    </a-scene>
+
+    <!-- ============================================================
+         JAVASCRIPT — load order matters
+    ============================================================ -->
     <script src="scripts/config.js"></script>
     <script src="scripts/scene-manager.js"></script>
     <script src="scripts/ar-components.js"></script>
     <script src="scripts/ui.js"></script>
     <script src="scripts/main.js"></script>
-    <script>
-      document.addEventListener("DOMContentLoaded", async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "environment",
-              width: { ideal: 1920 },
-              height: { ideal: 1080 },
-            },
-          });
-          console.log("Camera initialized (manual test)", stream);
-        } catch (err) {
-          console.warn("Camera test failed:", err);
-        }
-      });
-    </script>
   </body>
 </html>
