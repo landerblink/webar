@@ -35,64 +35,70 @@ AFRAME.registerComponent("image-target-handler", {
     el.addEventListener("targetFound", () => {
       console.log("[MindAR] FOUND:", targetName);
 
-      // Always update scan status panel — even for wrong-scene targets
-      // so the user can see which slot is being detected
-      UIManager.updateScanStatus(targetName, 'found');
+      if (typeof UIManager !== "undefined") {
+        UIManager.updateScanStatus(targetName, "found");
+      }
 
-      if (SceneManager.getActive() !== sceneId) return;
+      const activeScene = SceneManager.getActive();
+      if (activeScene !== null && activeScene !== sceneId) return;
 
       targetCfg.showOnFound.forEach((childId) => {
         const child = document.getElementById(childId);
         if (child) child.setAttribute("visible", true);
       });
 
-      // Target B scale animation
       if (targetName === "target-b") {
         const modelB = document.getElementById("model-b");
-
         if (modelB) {
           modelB.setAttribute(
             "animation__scalein",
             `
-            property: scale;
-            from: 0 0 0;
-            to: ${APP_CONFIG.scaleInTarget};
-            dur: ${APP_CONFIG.scaleInDuration};
-            easing: easeOutElastic
-          `,
+        property: scale;
+        from: 0 0 0;
+        to: ${APP_CONFIG.scaleInTarget};
+        dur: ${APP_CONFIG.scaleInDuration};
+        easing: easeOutElastic
+      `,
           );
         }
       }
 
-      UIManager.showTargetFound(targetCfg.label, sceneId);
+      if (typeof UIManager !== "undefined") {
+        // ✅ guard added
+        UIManager.showTargetFound(targetCfg.label, sceneId);
+      }
     });
 
     // TARGET LOST
     el.addEventListener("targetLost", () => {
       console.log("[MindAR] LOST:", targetName);
 
-      // Revert scan status — show 'searching' if in active scene, else 'wrong-scene'
-      const isActiveScene = SceneManager.getActive() === sceneId;
-      UIManager.updateScanStatus(targetName, isActiveScene ? 'searching' : 'wrong-scene');
+      if (typeof UIManager !== "undefined") {
+        // ✅ guard added
+        const isActiveScene = SceneManager.getActive() === sceneId;
+        UIManager.updateScanStatus(
+          targetName,
+          isActiveScene ? "searching" : "wrong-scene",
+        );
+      }
 
       targetCfg.showOnFound.forEach((childId) => {
         const child = document.getElementById(childId);
-
-        if (child) {
-          child.setAttribute("visible", false);
-        }
+        if (child) child.setAttribute("visible", false);
       });
 
       if (targetName === "target-b") {
         const modelB = document.getElementById("model-b");
-
         if (modelB) {
           modelB.removeAttribute("animation__scalein");
           modelB.setAttribute("scale", "0 0 0");
         }
       }
 
-      UIManager.showTargetLost();
+      if (typeof UIManager !== "undefined") {
+        // ✅ guard added
+        UIManager.showTargetLost();
+      }
     });
   },
 });

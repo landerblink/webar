@@ -62,12 +62,13 @@
     scene.addEventListener("loaded", () => {
       if (APP_CONFIG.debug) console.log("[Main] A-Frame scene loaded");
 
-      // Attach custom A-Frame components to image-target entities
+      // ✅ SceneManager FIRST so getActive() returns 'scene1' before
+      // any targetFound event can fire
+      SceneManager.init();
+
+      // THEN attach handlers
       attachTargetHandlers();
       attachTapInteractions();
-
-      // Initialise SceneManager (shows Scene 1 by default)
-      SceneManager.init();
 
       UIManager.setLoadingTip("Camera starting…");
       UIManager.setLoadingProgress(60);
@@ -114,6 +115,8 @@
     // ── Asset load failures (non-fatal) ──────────────────────
     scene.addEventListener("assetloadfailed", (evt) => {
       console.warn("[Main] Asset failed to load:", evt.detail);
+      // Force the scene to continue even if an asset fails
+      scene.querySelector("a-assets")?.emit("loaded");
     });
 
     // ── Debug: renderer info ──────────────────────────────────
