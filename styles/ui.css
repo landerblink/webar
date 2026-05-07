@@ -448,3 +448,193 @@
     transform: translateX(0);
   }
 }
+
+
+/* =============================================================
+   SCAN STATUS PANEL
+   Toggled by the 📡 button in the top bar.
+   Shows live tracking state for every target slot, so you can
+   verify your physical images match the compiled targets.mind.
+   ============================================================= */
+
+/* Top-bar button state badges */
+.scan-status-btn-idle   { color: var(--color-muted); }
+.scan-status-btn-active { color: var(--color-primary); box-shadow: var(--shadow-glow-cyan); border-color: var(--color-primary); }
+
+.scan-status-panel {
+  pointer-events: all;
+  position: absolute;
+  top: calc(var(--safe-top) + 60px);
+  right: 0.75rem;
+  width: min(290px, calc(100vw - 1.5rem));
+  background: rgba(10,10,15,0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  /* Slide in from the right */
+  transform: translateX(110%);
+  transition: transform var(--transition-med);
+}
+
+.scan-status-panel:not(.hidden) {
+  transform: translateX(0);
+}
+
+/* Header */
+.ssp-header {
+  padding: 0.75rem 1rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ssp-title {
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.ssp-hint {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  letter-spacing: 0.03em;
+}
+
+/* Target rows */
+.ssp-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.ssp-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background var(--transition-fast);
+}
+
+.ssp-row:last-child { border-bottom: none; }
+
+/* Slot badge (index number) */
+.ssp-slot {
+  min-width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--color-surface2);
+  border: 1px solid var(--color-border);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-display);
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-med);
+}
+
+/* Label */
+.ssp-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.ssp-label-main {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ssp-label-sub {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  margin-top: 0.05rem;
+}
+
+/* Status pill */
+.ssp-status {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.55rem;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface2);
+  color: var(--color-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all var(--transition-med);
+}
+
+/* — States — */
+
+/* SEARCHING: soft scanning animation */
+.ssp-row.state-searching .ssp-status {
+  color: var(--color-muted);
+  animation: ssp-scan-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes ssp-scan-pulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1; }
+}
+
+/* FOUND: bright green glow */
+.ssp-row.state-found {
+  background: rgba(0, 229, 120, 0.05);
+}
+
+.ssp-row.state-found .ssp-slot {
+  background: #00e578;
+  border-color: #00e578;
+  color: #000;
+  box-shadow: 0 0 10px rgba(0,229,120,0.5);
+}
+
+.ssp-row.state-found .ssp-status {
+  background: rgba(0,229,120,0.15);
+  border-color: rgba(0,229,120,0.4);
+  color: #00e578;
+  animation: none;
+}
+
+/* WRONG SCENE: dimmed, orange tint */
+.ssp-row.state-wrong-scene .ssp-slot {
+  border-color: rgba(255,107,53,0.3);
+  color: var(--color-secondary);
+}
+
+.ssp-row.state-wrong-scene .ssp-status {
+  color: var(--color-secondary);
+  border-color: rgba(255,107,53,0.2);
+  opacity: 0.75;
+}
+
+/* Footer tip */
+.ssp-footer {
+  padding: 0.5rem 1rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  letter-spacing: 0.03em;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+}
+
+#ssp-tip {
+  transition: all var(--transition-fast);
+}

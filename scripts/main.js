@@ -75,7 +75,6 @@
 
     // ── Step 2: MindAR ready ─────────────────────────────────
     // Camera feed is live and MindAR is tracking.
-    // This is the MindAR equivalent of 8th Wall's xrloaded.
     scene.addEventListener("arReady", () => {
       if (APP_CONFIG.debug) console.log("[Main] MindAR arReady — camera live");
 
@@ -83,6 +82,9 @@
       UIManager.setLoadingTip("AR ready — point at a target!");
       UIManager.hideLoadingScreen();
       UIManager.showMainUI();
+
+      // Mark all targets as 'searching' (active scene) or 'wrong-scene'
+      UIManager.setScanStatusForScene(SceneManager.getActive());
     });
 
     // ── Step 3: MindAR error ─────────────────────────────────

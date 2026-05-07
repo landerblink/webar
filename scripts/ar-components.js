@@ -35,6 +35,10 @@ AFRAME.registerComponent("image-target-handler", {
     el.addEventListener("targetFound", () => {
       console.log("[MindAR] FOUND:", targetName);
 
+      // Always update scan status panel — even for wrong-scene targets
+      // so the user can see which slot is being detected
+      UIManager.updateScanStatus(targetName, 'found');
+
       if (SceneManager.getActive() !== sceneId) return;
 
       targetCfg.showOnFound.forEach((childId) => {
@@ -66,6 +70,10 @@ AFRAME.registerComponent("image-target-handler", {
     // TARGET LOST
     el.addEventListener("targetLost", () => {
       console.log("[MindAR] LOST:", targetName);
+
+      // Revert scan status — show 'searching' if in active scene, else 'wrong-scene'
+      const isActiveScene = SceneManager.getActive() === sceneId;
+      UIManager.updateScanStatus(targetName, isActiveScene ? 'searching' : 'wrong-scene');
 
       targetCfg.showOnFound.forEach((childId) => {
         const child = document.getElementById(childId);

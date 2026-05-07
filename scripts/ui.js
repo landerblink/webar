@@ -233,6 +233,130 @@ const UIManager = (function () {
     });
   }
 
+  // ── Scan Status Panel ───────────────────────────────────
+
+  // Track per-target state: 'idle' | 'searching' | 'found'
+  const _targetStates = {};
+
+  /**
+   * Build the target-row HTML from APP_CONFIG and inject into #ssp-body.
+   * Called once during init() so we always reflect the current config.
+   */
+  function _buildScanStatusPanel() {
+    const body = _el('ssp-body');
+    if (!body) return;
+
+    body.innerHTML = '';
+
+    APP_CONFIG.targets.forEach((tCfg, i) => {
+      _targetStates[tCfg.id] = 'idle';
+
+      const row = document.createElement('div');
+      row.className = 'ssp-row state-idle';
+      row.id = `ssp-row-${tCfg.id}`;
+
+      // Find which scene this target belongs to
+      const sceneLabel = APP_CONFIG.scenes.find(s => s.id === tCfg.scene)?.label || tCfg.scene;
+
+      row.innerHTML = `
+        <div class="ssp-slot" id="ssp-slot-${tCfg.id}">${i}</div>
+        <div class="ssp-label">
+          <div class="ssp-label-main">${tCfg.label.split('—')[1]?.trim() || tCfg.label}</div>
+          <div class="ssp-label-sub">Slot ${i} · ${sceneLabel}</div>
+        </div>
+        <div class="ssp-status" id="ssp-status-${tCfg.id}">Idle</div>
+      `;
+
+      body.appendChild(row);
+    });
+  }
+
+  /**
+   * Update the visual state of a single target row.
+   * @param {string} targetId   from APP_CONFIG.targets[n].id
+   * @param {'idle'|'searching'|'found'|'wrong-scene'} state
+   */
+  function updateScanStatus(targetId, state) {
+    _targetStates[targetId] = state;
+
+    const row    = document.getElementById(`ssp-row-${targetId}`);
+    const status = document.getElementById(`ssp-status-${targetId}`);
+    if (!row || !status) return;
+
+    // Remove all state classes, add the new one
+    row.className = `ssp-row state-${state}`;
+
+    const labels = {
+      idle:        'Idle',
+      searching:   'Scanning…',
+      found:       '✓ Found',
+      'wrong-scene': 'Wrong scene',
+    };
+    status.textContent = labels[state] || state;
+
+    // Update the footer tip
+    _updateSspFooter();
+
+    // Flash the top-bar button when something is found
+    const btn = _el('scan-status-btn');
+    if (btn) {
+      if (state === 'found') {
+        btn.classList.add('scan-status-btn-active');
+        btn.classList.remove('scan-status-btn-idle');
+      } else {
+        // Only revert if nothing else is found
+        const anyFound = Object.values(_targetStates).some(s => s === 'found');
+        if (!anyFound) {
+          btn.classList.remove('scan-status-btn-active');
+          btn.classList.add('scan-status-btn-idle');
+        }
+      }
+    }
+  }
+
+  /**
+   * Mark all targets for the active scene as 'searching',
+   * and wrong-scene targets accordingly.
+   * Called when a scene switch happens.
+   */
+  function setScanStatusForScene(sceneId) {
+    APP_CONFIG.targets.forEach(tCfg => {
+      const current = _targetStates[tCfg.id];
+      if (current === 'found') return; // don't clobber a live detection
+      updateScanStatus(tCfg.id, tCfg.scene === sceneId ? 'searching' : 'wrong-scene');
+    });
+  }
+
+  /** Derive a helpful one-liner for the panel footer. */
+  function _updateSspFooter() {
+    const tip = _el('ssp-tip');
+    if (!tip) return;
+
+    const foundIds   = Object.entries(_targetStates).filter(([,s]) => s === 'found').map(([id]) => id);
+    const wrongScene = Object.values(_targetStates).filter(s => s === 'wrong-scene').length;
+
+    if (foundIds.length > 0) {
+      const label = APP_CONFIG.targets.find(t => t.id === foundIds[0])?.label || foundIds[0];
+      tip.textContent = `✓ ${label.split('—')[1]?.trim() || label} detected`;
+    } else if (wrongScene === APP_CONFIG.targets.length) {
+      tip.textContent = 'Switch to the correct scene tab';
+    } else {
+      tip.textContent = 'Point camera at your printed image';
+    }
+  }
+
+  /** Toggle scan status panel visibility. */
+  function toggleScanStatusPanel() {
+    const panel = _el('scan-status-panel');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+
+    // When opening, immediately set states
+    if (!panel.classList.contains('hidden')) {
+      setScanStatusForScene(SceneManager.getActive() || APP_CONFIG.scenes[0]?.id);
+    }
+  }
+
   // ── Init ────────────────────────────────────────────────
 
   /**
@@ -260,17 +384,38 @@ const UIManager = (function () {
     // Fullscreen button
     _el('fullscreen-btn')?.addEventListener('click', toggleFullscreen);
 
+    // Scan status panel button
+    _el('scan-status-btn')?.addEventListener('click', toggleScanStatusPanel);
+
+    // Close scan panel when tapping outside it
+    document.addEventListener('click', (evt) => {
+      const panel = _el('scan-status-panel');
+      const btn   = _el('scan-status-btn');
+      if (panel && !panel.classList.contains('hidden')) {
+        if (!panel.contains(evt.target) && evt.target !== btn) {
+          panel.classList.add('hidden');
+        }
+      }
+    });
+
+    // Keep scan status in sync when scene switches
+    document.addEventListener('sceneChanged', (evt) => {
+      setScanStatusForScene(evt.detail.sceneId);
+    });
+
     // Camera retry button
     _el('retry-camera-btn')?.addEventListener('click', () => {
       hideCameraPermissionOverlay();
       location.reload();
     });
 
+    // Build scan status rows from config
+    _buildScanStatusPanel();
+
     // Start simulated loading bar
     _startLoadingBar();
 
     // Attach ripple to canvas (fires after A-Frame creates it)
-    // We wait a tick so the canvas exists in DOM
     setTimeout(_attachCanvasTouchRipple, 500);
 
     if (APP_CONFIG.debug) console.log('[UIManager] Init complete');
@@ -292,6 +437,9 @@ const UIManager = (function () {
     hideInfoPanel,
     toggleFullscreen,
     spawnRipple,
+    updateScanStatus,
+    setScanStatusForScene,
+    toggleScanStatusPanel,
   };
 
 })();
