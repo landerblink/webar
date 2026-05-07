@@ -2,54 +2,39 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+    <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   </head>
 
   <body>
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind;"
+      mindar-image="
+        imageTargetSrc: ./targets.mind;
+        autoStart: true;
+        uiLoading: yes;
+        uiScanning: yes;
+        uiError: yes;
+      "
       embedded
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
       renderer="colorManagement: true, physicallyCorrectLights"
     >
-      <!-- Assets -->
-      <a-assets>
-        <img
-          id="card"
-          crossorigin="anonymous"
-          src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png"
-        />
-
-        <a-asset-item
-          id="avatarModel"
-          src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/softmind/scene.gltf"
-        ></a-asset-item>
-      </a-assets>
-
-      <!-- Camera (MUST exist) -->
+      <!-- Camera -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- AR Target -->
+      <!-- Target -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- Image plane -->
+        <!-- Simple visual test (start light first) -->
         <a-plane
-          src="#card"
           position="0 0 0"
-          height="0.552"
           width="1"
-          rotation="0 0 0"
+          height="0.6"
+          color="#4CC3D9"
         ></a-plane>
-
-        <!-- 3D Model -->
-        <a-gltf-model
-          src="#avatarModel"
-          position="0 0 0.1"
-          rotation="0 0 0"
-          scale="0.005 0.005 0.005"
-          animation="property: position; to: 0 0.1 0.1; dur: 1000; easing: easeInOutQuad; loop: true; dir: alternate"
-        ></a-gltf-model>
       </a-entity>
     </a-scene>
   </body>
