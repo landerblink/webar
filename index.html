@@ -2,29 +2,44 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      /* Optional: small HUD to show persistence countdown */
+      html, body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      a-scene {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+      }
+
       #hud {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0,0,0,0.55);
-        color: #fff;
-        font-family: monospace;
-        font-size: 14px;
-        padding: 6px 14px;
+        background: rgba(0,0,0,0.6);
+        color: white;
+        padding: 6px 12px;
         border-radius: 20px;
-        pointer-events: none;
+        font-family: monospace;
+        font-size: 13px;
         opacity: 0;
-        transition: opacity 0.3s;
-        z-index: 999;
+        transition: 0.2s;
       }
-      #hud.visible { opacity: 1; }
+
+      #hud.show {
+        opacity: 1;
+      }
     </style>
   </head>
 
@@ -34,177 +49,115 @@
     <a-scene
       id="scene"
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
-        <a-asset-item id="bearModel"    src="./assets/Astronaut.glb"></a-asset-item>
-        <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
+        <a-asset-item id="bearModel" src="./assets/Astronaut.glb"></a-asset-item>
+        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- MindAR target anchors — models are children here ONLY before first detection -->
-      <a-entity id="target0" mindar-image-target="targetIndex: 0">
-        <a-gltf-model
-          id="model0"
-          rotation="0 0 0"
-          position="0 -0.25 0"
-          scale="0.05 0.05 0.05"
-          src="#raccoonModel"
-          animation-mixer
-        ></a-gltf-model>
-      </a-entity>
-
-      <a-entity id="target1" mindar-image-target="targetIndex: 1">
-        <a-gltf-model
-          id="model1"
-          rotation="0 0 0"
-          position="0 -0.25 0"
-          scale="0.05 0.05 0.05"
-          src="#bearModel"
-          animation-mixer
-        ></a-gltf-model>
-      </a-entity>
+      <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
+      <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
     </a-scene>
 
     <script>
-      /**
-       * World-lock + persistence strategy
-       * ------------------------------------
-       * On targetFound:
-       *   1. Read the model's current world-space matrix.
-       *   2. Re-parent the model to the scene root (<a-scene>).
-       *   3. Apply the saved world matrix so it stays exactly where it appeared.
-       *   4. Clear any hide timer.
-       *
-       * On targetLost:
-       *   Start a 10-second timer. If targetFound fires again within that window,
-       *   cancel the timer and update the world position. Otherwise, hide the model.
-       */
+      // WAIT UNTIL AFRAME IS READY
+      window.addEventListener("load", () => {
+        const scene = document.querySelector("a-scene");
+        const hud = document.getElementById("hud");
 
-      const PERSIST_MS = 10000; // 10 seconds
+        const target0 = document.querySelector("#target0");
+        const target1 = document.querySelector("#target1");
 
-      const targets = [
-        { targetId: 'target0', modelId: 'model0' },
-        { targetId: 'target1', modelId: 'model1' },
-      ];
+        let model0, model1;
+        let timer0, timer1;
 
-      // Per-model state
-      const state = {};
-
-      AFRAME.registerComponent('world-lock-manager', {
-        init() {
-          const sceneEl = this.el;
-
-          targets.forEach(({ targetId, modelId }) => {
-            state[modelId] = { hideTimer: null, anchored: false };
-
-            const targetEl = document.getElementById(targetId);
-            const modelEl  = document.getElementById(modelId);
-
-            targetEl.addEventListener('targetFound', () => {
-              const s = state[modelId];
-
-              // Cancel any pending hide
-              if (s.hideTimer) {
-                clearTimeout(s.hideTimer);
-                s.hideTimer = null;
-                hideHud();
-              }
-
-              // Make sure model is visible
-              modelEl.setAttribute('visible', true);
-
-              if (!s.anchored) {
-                // ── First detection: bake world position ──
-                // Wait one tick so A-Frame has updated the world matrix
-                setTimeout(() => {
-                  // Get world position / rotation / scale
-                  const worldPos   = new THREE.Vector3();
-                  const worldQuat  = new THREE.Quaternion();
-                  const worldScale = new THREE.Vector3();
-                  modelEl.object3D.getWorldPosition(worldPos);
-                  modelEl.object3D.getWorldQuaternion(worldQuat);
-                  modelEl.object3D.getWorldScale(worldScale);
-
-                  // Reparent to scene root
-                  sceneEl.appendChild(modelEl);
-
-                  // Apply saved world transform
-                  modelEl.object3D.position.copy(worldPos);
-                  modelEl.object3D.quaternion.copy(worldQuat);
-                  modelEl.object3D.scale.copy(worldScale);
-
-                  s.anchored = true;
-                }, 0);
-
-              } else {
-                // ── Subsequent detections: update world position ──
-                // (user re-scanned; snap model to new detected position)
-                setTimeout(() => {
-                  // Temporarily read from target entity
-                  const worldPos  = new THREE.Vector3();
-                  const worldQuat = new THREE.Quaternion();
-                  const worldScale = new THREE.Vector3();
-
-                  // The model is now a scene child, but targetEl still has the
-                  // tracked transform. Read it directly.
-                  targetEl.object3D.getWorldPosition(worldPos);
-                  targetEl.object3D.getWorldQuaternion(worldQuat);
-                  targetEl.object3D.getWorldScale(worldScale);
-
-                  // Offset by the model's local offset (0, -0.25, 0) × scale
-                  // (targetEl transform already includes tracking offset, so
-                  //  we just keep the model's own local offsets baked in.)
-                  modelEl.object3D.position.copy(worldPos);
-                  modelEl.object3D.quaternion.copy(worldQuat);
-                  // Keep the baked scale (don't inherit target scale)
-                }, 0);
-              }
-            });
-
-            targetEl.addEventListener('targetLost', () => {
-              const s = state[modelId];
-              if (s.hideTimer) return; // already counting down
-
-              let remaining = PERSIST_MS / 1000;
-              showHud(`Model visible for ${remaining}s…`);
-
-              const interval = setInterval(() => {
-                remaining--;
-                if (remaining > 0) {
-                  showHud(`Model visible for ${remaining}s…`);
-                } else {
-                  clearInterval(interval);
-                }
-              }, 1000);
-
-              s.hideTimer = setTimeout(() => {
-                modelEl.setAttribute('visible', false);
-                s.hideTimer = null;
-                clearInterval(interval);
-                hideHud();
-              }, PERSIST_MS);
-            });
-          });
+        function show(msg) {
+          hud.textContent = msg;
+          hud.classList.add("show");
         }
+
+        function hide() {
+          hud.classList.remove("show");
+        }
+
+        function spawnModel(target, modelId, src, timerRef) {
+          let model = document.createElement("a-gltf-model");
+
+          model.setAttribute("src", src);
+          model.setAttribute("scale", "0.2 0.2 0.2");
+          model.setAttribute("animation-mixer", "");
+
+          scene.appendChild(model);
+
+          // LOCK WORLD POSITION
+          setTimeout(() => {
+            const pos = new THREE.Vector3();
+            target.object3D.getWorldPosition(pos);
+
+            model.object3D.position.copy(pos);
+          }, 0);
+
+          return model;
+        }
+
+        // TARGET 0
+        target0.addEventListener("targetFound", () => {
+          clearTimeout(timer0);
+          hide();
+
+          if (!model0) {
+            model0 = spawnModel(target0, "m0", "#horseModel");
+          }
+        });
+
+        target0.addEventListener("targetLost", () => {
+          let t = 10;
+          show(`Model hides in ${t}s`);
+
+          const interval = setInterval(() => {
+            t--;
+            show(`Model hides in ${t}s`);
+            if (t <= 0) clearInterval(interval);
+          }, 1000);
+
+          timer0 = setTimeout(() => {
+            if (model0) model0.setAttribute("visible", false);
+            hide();
+            clearInterval(interval);
+          }, 10000);
+        });
+
+        // TARGET 1
+        target1.addEventListener("targetFound", () => {
+          clearTimeout(timer1);
+          hide();
+
+          if (!model1) {
+            model1 = spawnModel(target1, "m1", "#bearModel");
+          }
+        });
+
+        target1.addEventListener("targetLost", () => {
+          let t = 10;
+          show(`Model hides in ${t}s`);
+
+          const interval = setInterval(() => {
+            t--;
+            show(`Model hides in ${t}s`);
+            if (t <= 0) clearInterval(interval);
+          }, 1000);
+
+          timer1 = setTimeout(() => {
+            if (model1) model1.setAttribute("visible", false);
+            hide();
+            clearInterval(interval);
+          }, 10000);
+        });
       });
-
-      // Attach the manager to the scene
-      document.querySelector('a-scene').setAttribute('world-lock-manager', '');
-
-      // ── HUD helpers ──
-      const hud = document.getElementById('hud');
-      function showHud(msg) {
-        hud.textContent = msg;
-        hud.classList.add('visible');
-      }
-      function hideHud() {
-        hud.classList.remove('visible');
-      }
     </script>
   </body>
 </html>
