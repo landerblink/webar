@@ -1,119 +1,97 @@
 <!doctype html>
 <html>
   <head>
-    <meta charset="UTF-8" />
-
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-
-      canvas {
-        width: 100% !important;
-        height: 100% !important;
-      }
-    </style>
   </head>
 
   <body>
     <a-scene
-      mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2;"
+      mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
       color-space="sRGB"
-      renderer="colorManagement: true; physicallyCorrectLights: true"
+      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
-      embedded
     >
-      <!-- ASSETS -->
       <a-assets>
         <a-asset-item
           id="bearModel"
           src="./assets/Astronaut.glb"
         ></a-asset-item>
 
-        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
+        <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
-      <!-- CAMERA -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- TARGET 0 -->
-      <a-entity mindar-image-target="targetIndex: 0" id="target0"></a-entity>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-gltf-model
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#raccoonModel"
+          animation-mixer
+        >
+        </a-gltf-model>
+      </a-entity>
 
-      <!-- TARGET 1 -->
-      <a-entity mindar-image-target="targetIndex: 1" id="target1"></a-entity>
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-gltf-model
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#bearModel"
+          animation-mixer
+        >
+        </a-gltf-model>
+      </a-entity>
     </a-scene>
-
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const scene = document.querySelector("a-scene");
+  document.addEventListener("DOMContentLoaded", () => {
+    const target0 = document.querySelector(
+      '[mindar-image-target="targetIndex: 0"]'
+    );
 
-        const target0 = document.querySelector("#target0");
-        const target1 = document.querySelector("#target1");
+    const target1 = document.querySelector(
+      '[mindar-image-target="targetIndex: 1"]'
+    );
 
-        let spawned0 = false;
-        let spawned1 = false;
+    let timeout0;
+    let timeout1;
 
-        // =========================
-        // TARGET 0 -> HORSE MODEL
-        // =========================
-        target0.addEventListener("targetFound", () => {
-          if (spawned0) return;
+    // TARGET 0
+    target0.addEventListener("targetFound", () => {
+      clearTimeout(timeout0);
 
-          const model = document.createElement("a-gltf-model");
+      target0.object3D.visible = true;
+    });
 
-          model.setAttribute("src", "#horseModel");
+    target0.addEventListener("targetLost", () => {
+      clearTimeout(timeout0);
 
-          // Bigger scale so easier to view
-          model.setAttribute("scale", "0.2 0.2 0.2");
+      timeout0 = setTimeout(() => {
+        target0.object3D.visible = false;
+      }, 10000); // 10 seconds
+    });
 
-          // Spawn slightly in front of camera
-          model.setAttribute("position", "0 0 -2");
+    // TARGET 1
+    target1.addEventListener("targetFound", () => {
+      clearTimeout(timeout1);
 
-          model.setAttribute("rotation", "0 0 0");
+      target1.object3D.visible = true;
+    });
 
-          model.setAttribute("animation-mixer", "");
+    target1.addEventListener("targetLost", () => {
+      clearTimeout(timeout1);
 
-          scene.appendChild(model);
-
-          spawned0 = true;
-        });
-
-        // =========================
-        // TARGET 1 -> ASTRONAUT MODEL
-        // =========================
-        target1.addEventListener("targetFound", () => {
-          if (spawned1) return;
-
-          const model = document.createElement("a-gltf-model");
-
-          model.setAttribute("src", "#bearModel");
-
-          model.setAttribute("scale", "0.2 0.2 0.2");
-
-          model.setAttribute("position", "0 0 -2");
-
-          model.setAttribute("rotation", "0 0 0");
-
-          model.setAttribute("animation-mixer", "");
-
-          scene.appendChild(model);
-
-          spawned1 = true;
-        });
-      });
-    </script>
+      timeout1 = setTimeout(() => {
+        target1.object3D.visible = false;
+      }, 10000); // 10 seconds
+    });
+  });
+</script>
   </body>
 </html>
