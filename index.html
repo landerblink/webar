@@ -2,6 +2,7 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
@@ -20,6 +21,7 @@
         pointer-events: none;
         z-index: 999;
       }
+
       .hud-pill {
         background: rgba(0,0,0,0.65);
         color: #fff;
@@ -30,6 +32,7 @@
         opacity: 0;
         transition: opacity 0.3s;
       }
+
       .hud-pill.visible { opacity: 1; }
     </style>
   </head>
@@ -39,77 +42,42 @@
 
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
-      color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
+
       <a-assets>
-        <a-asset-item id="bearModel"    src="./assets/Astronaut.glb"></a-asset-item>
+        <a-asset-item id="bearModel" src="./assets/Astronaut.glb"></a-asset-item>
         <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
       <a-camera id="cam" position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- MindAR target anchors — tracker models are INVISIBLE, used only for transform reading -->
-      <a-entity id="target0" mindar-image-target="targetIndex: 0">
-        <a-gltf-model id="tracker0" visible="false"
-          position="0 0 0" rotation="0 0 0" scale="1 1 1"
-          src="#raccoonModel">
-        </a-gltf-model>
-      </a-entity>
+      <!-- TARGET 0 -->
+      <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
 
-      <a-entity id="target1" mindar-image-target="targetIndex: 1">
-        <a-gltf-model id="tracker1" visible="false"
-          position="0 0 0" rotation="0 0 0" scale="1 1 1"
-          src="#bearModel">
-        </a-gltf-model>
-      </a-entity>
+      <!-- TARGET 1 -->
+      <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
 
     </a-scene>
 
     <script>
-      /**
-       * HOW THIS WORKS
-       * ==============
-       * MindAR operates in camera-relative space — the target entity's world
-       * position is expressed relative to the camera, NOT to a fixed world origin.
-       * That's why a naively placed clone always "follows" the camera.
-       *
-       * Fix:
-       *  1. When targetFound fires, read the target entity's position/rotation
-       *     in CAMERA LOCAL space (i.e. its position relative to the camera).
-       *  2. Create a world-locked clone as a child of <a-scene> (world root).
-       *  3. Transform the camera-space offset into world space using the camera's
-       *     current world matrix.
-       *  4. The clone is now at a fixed world position. The camera can move freely.
-       *
-       * Scale:
-       *  MindAR target coordinates use a normalised unit where 1 unit ≈ the width
-       *  of the tracked image in metres (roughly). The tracker model has scale 1 1 1
-       *  so getWorldScale returns the raw MindAR scale — which is usable for
-       *  position math but NOT for the visual model. We use a fixed display scale.
-       *
-       * Multiple models:
-       *  Each target has completely independent state — no shared flags.
-       */
-
-      const PERSIST_MS   = 10000;   // ms model stays visible after target lost
-      const DISPLAY_SCALE = 0.15;   // visual size of the model in world units — tweak to taste
+      const PERSIST_MS = 10000;
+      const DISPLAY_SCALE = 1.0; // 👈 FIXED SIZE (increase if still small)
 
       const configs = [
-        { targetId: 'target0', trackerId: 'tracker0', src: '#raccoonModel', label: 'Horse'     },
-        { targetId: 'target1', trackerId: 'tracker1', src: '#bearModel',    label: 'Astronaut' },
+        { targetId: 'target0', src: '#raccoonModel', label: 'Horse' },
+        { targetId: 'target1', src: '#bearModel', label: 'Astronaut' },
       ];
 
-      // ── Per-model HUD pills (independent per model) ───────────────────────────
       const hudContainer = document.getElementById('hud-container');
 
       function makeHud(label) {
         const pill = document.createElement('div');
         pill.className = 'hud-pill';
-        pill.dataset.label = label;
         hudContainer.appendChild(pill);
+
         let intervalId = null;
 
         return {
@@ -119,117 +87,121 @@
           },
           startCountdown(seconds, onTick, onDone) {
             if (intervalId) clearInterval(intervalId);
+
             let rem = seconds;
             onTick(rem);
+
             intervalId = setInterval(() => {
               rem--;
-              if (rem > 0) { onTick(rem); }
-              else { clearInterval(intervalId); intervalId = null; onDone(); }
+              if (rem > 0) onTick(rem);
+              else {
+                clearInterval(intervalId);
+                intervalId = null;
+                onDone();
+              }
             }, 1000);
           },
           hide() {
             pill.classList.remove('visible');
-            if (intervalId) { clearInterval(intervalId); intervalId = null; }
+            if (intervalId) clearInterval(intervalId);
           }
         };
       }
 
-      // ── Main ──────────────────────────────────────────────────────────────────
       document.querySelector('a-scene').addEventListener('loaded', () => {
         const sceneEl = document.querySelector('a-scene');
         const cameraEl = document.getElementById('cam');
 
-        configs.forEach(({ targetId, trackerId, src, label }) => {
-          const targetEl  = document.getElementById(targetId);
-          const trackerEl = document.getElementById(trackerId);
-          const hud       = makeHud(label);
+        configs.forEach(({ targetId, src, label }) => {
 
-          // World-locked clone — direct child of scene (world root)
+          const targetEl = document.getElementById(targetId);
+          const hud = makeHud(label);
+
+          // world-locked model
           const cloneEl = document.createElement('a-gltf-model');
           cloneEl.setAttribute('src', src);
           cloneEl.setAttribute('animation-mixer', '');
           cloneEl.setAttribute('visible', 'false');
+
           sceneEl.appendChild(cloneEl);
 
-          // Independent state per model
           let hideTimer = null;
-          let isPlaced  = false;
+          let isPlaced = false;
 
           function cancelHide() {
-            if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+            if (hideTimer) clearTimeout(hideTimer);
+            hideTimer = null;
             hud.hide();
           }
 
           function placeClone() {
-            /**
-             * Step 1: Get the target's world position (camera-relative world pos).
-             *         In MindAR the "world" IS camera space, so this position
-             *         is the offset from the camera to the target in camera coords.
-             */
-            const targetWorldPos  = new THREE.Vector3();
-            const targetWorldQuat = new THREE.Quaternion();
-            targetEl.object3D.getWorldPosition(targetWorldPos);
-            targetEl.object3D.getWorldQuaternion(targetWorldQuat);
+            const pos = new THREE.Vector3();
+            const quat = new THREE.Quaternion();
 
-            /**
-             * Step 2: The camera's world matrix converts camera-space points
-             *         to scene-world-space points.
-             *         Apply camera world matrix to targetWorldPos.
-             */
-            const camMatrix = new THREE.Matrix4();
-            camMatrix.copy(cameraEl.object3D.matrixWorld);
+            targetEl.object3D.getWorldPosition(pos);
+            targetEl.object3D.getWorldQuaternion(quat);
 
-            // Transform target position from camera-world-space to true world space
-            const worldPos = targetWorldPos.clone().applyMatrix4(camMatrix);
+            // IMPORTANT: NO CAMERA MATRIX (fixes drifting bug)
+            cloneEl.object3D.position.copy(pos);
 
-            // Combine rotations: cameraWorldQuat * targetWorldQuat
             const camQuat = new THREE.Quaternion();
             cameraEl.object3D.getWorldQuaternion(camQuat);
-            const worldQuat = camQuat.clone().multiply(targetWorldQuat);
 
-            // Apply to clone
-            cloneEl.object3D.position.copy(worldPos);
-            cloneEl.object3D.quaternion.copy(worldQuat);
-            cloneEl.object3D.scale.set(DISPLAY_SCALE, DISPLAY_SCALE, DISPLAY_SCALE);
+            cloneEl.object3D.quaternion.copy(camQuat.multiply(quat));
+
+            cloneEl.object3D.scale.set(
+              DISPLAY_SCALE,
+              DISPLAY_SCALE,
+              DISPLAY_SCALE
+            );
           }
 
-          // ── targetFound ────────────────────────────────────────────────────
+          function startLiveUpdate() {
+            const loop = () => {
+              if (!isPlaced) return;
+              placeClone();
+              requestAnimationFrame(loop);
+            };
+            loop();
+          }
+
           targetEl.addEventListener('targetFound', () => {
             cancelHide();
 
-            // Two rAF delay ensures MindAR has updated all matrices
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
+
                 placeClone();
                 cloneEl.setAttribute('visible', 'true');
                 isPlaced = true;
+
+                startLiveUpdate();
+
                 hud.show(`${label} · tracking`);
               });
             });
           });
 
-          // ── targetLost ─────────────────────────────────────────────────────
           targetEl.addEventListener('targetLost', () => {
             if (!isPlaced) return;
-            if (hideTimer) return;
 
-            const totalSec = Math.round(PERSIST_MS / 1000);
+            const sec = Math.round(PERSIST_MS / 1000);
 
             hud.startCountdown(
-              totalSec,
-              (rem) => hud.show(`${label} · hiding in ${rem}s`),
-              ()    => hud.hide()
+              sec,
+              (r) => hud.show(`${label} · hiding in ${r}s`),
+              () => hud.hide()
             );
 
             hideTimer = setTimeout(() => {
               cloneEl.setAttribute('visible', 'false');
-              isPlaced  = false;
+              isPlaced = false;
               hideTimer = null;
             }, PERSIST_MS);
           });
 
-        }); // forEach
-      }); // loaded
+        });
+      });
     </script>
   </body>
 </html>
