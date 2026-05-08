@@ -13,7 +13,8 @@
       #hud-container {
         position: fixed;
         bottom: 24px;
-        left: 0; right: 0;
+        left: 0;
+        right: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -33,7 +34,9 @@
         transition: opacity 0.3s;
       }
 
-      .hud-pill.visible { opacity: 1; }
+      .hud-pill.visible {
+        opacity: 1;
+      }
     </style>
   </head>
 
@@ -54,17 +57,14 @@
 
       <a-camera id="cam" position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- TARGET 0 -->
       <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
-
-      <!-- TARGET 1 -->
       <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
 
     </a-scene>
 
     <script>
-      const PERSIST_MS = 10000;
-      const DISPLAY_SCALE = 1.0; // 👈 FIXED SIZE (increase if still small)
+      const LOST_GRACE_MS = 2500; // 👈 stability fix (important)
+      const DISPLAY_SCALE = 1.0;   // adjust size here
 
       const configs = [
         { targetId: 'target0', src: '#raccoonModel', label: 'Horse' },
@@ -78,32 +78,13 @@
         pill.className = 'hud-pill';
         hudContainer.appendChild(pill);
 
-        let intervalId = null;
-
         return {
           show(msg) {
             pill.textContent = msg;
             pill.classList.add('visible');
           },
-          startCountdown(seconds, onTick, onDone) {
-            if (intervalId) clearInterval(intervalId);
-
-            let rem = seconds;
-            onTick(rem);
-
-            intervalId = setInterval(() => {
-              rem--;
-              if (rem > 0) onTick(rem);
-              else {
-                clearInterval(intervalId);
-                intervalId = null;
-                onDone();
-              }
-            }, 1000);
-          },
           hide() {
             pill.classList.remove('visible');
-            if (intervalId) clearInterval(intervalId);
           }
         };
       }
@@ -117,7 +98,6 @@
           const targetEl = document.getElementById(targetId);
           const hud = makeHud(label);
 
-          // world-locked model
           const cloneEl = document.createElement('a-gltf-model');
           cloneEl.setAttribute('src', src);
           cloneEl.setAttribute('animation-mixer', '');
@@ -125,14 +105,8 @@
 
           sceneEl.appendChild(cloneEl);
 
-          let hideTimer = null;
           let isPlaced = false;
-
-          function cancelHide() {
-            if (hideTimer) clearTimeout(hideTimer);
-            hideTimer = null;
-            hud.hide();
-          }
+          let lostTimeout = null;
 
           function placeClone() {
             const pos = new THREE.Vector3();
@@ -141,7 +115,6 @@
             targetEl.object3D.getWorldPosition(pos);
             targetEl.object3D.getWorldQuaternion(quat);
 
-            // IMPORTANT: NO CAMERA MATRIX (fixes drifting bug)
             cloneEl.object3D.position.copy(pos);
 
             const camQuat = new THREE.Quaternion();
@@ -156,17 +129,19 @@
             );
           }
 
-          function startLiveUpdate() {
-            const loop = () => {
-              if (!isPlaced) return;
-              placeClone();
-              requestAnimationFrame(loop);
-            };
-            loop();
+          function liveUpdate() {
+            if (!isPlaced) return;
+            placeClone();
+            requestAnimationFrame(liveUpdate);
           }
 
           targetEl.addEventListener('targetFound', () => {
-            cancelHide();
+
+            // cancel any pending hide
+            if (lostTimeout) {
+              clearTimeout(lostTimeout);
+              lostTimeout = null;
+            }
 
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
@@ -175,9 +150,9 @@
                 cloneEl.setAttribute('visible', 'true');
                 isPlaced = true;
 
-                startLiveUpdate();
-
                 hud.show(`${label} · tracking`);
+
+                liveUpdate();
               });
             });
           });
@@ -185,22 +160,20 @@
           targetEl.addEventListener('targetLost', () => {
             if (!isPlaced) return;
 
-            const sec = Math.round(PERSIST_MS / 1000);
+            hud.show(`${label} · tracking lost`);
 
-            hud.startCountdown(
-              sec,
-              (r) => hud.show(`${label} · hiding in ${r}s`),
-              () => hud.hide()
-            );
+            if (lostTimeout) clearTimeout(lostTimeout);
 
-            hideTimer = setTimeout(() => {
+            lostTimeout = setTimeout(() => {
               cloneEl.setAttribute('visible', 'false');
               isPlaced = false;
-              hideTimer = null;
-            }, PERSIST_MS);
+              lostTimeout = null;
+              hud.hide();
+            }, LOST_GRACE_MS);
           });
 
         });
+
       });
     </script>
   </body>
