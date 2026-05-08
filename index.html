@@ -12,109 +12,195 @@
         margin: 0;
         overflow: hidden;
       }
+
+      #hud-container {
+        position: fixed;
+        bottom: 24px;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        pointer-events: none;
+        z-index: 999;
+      }
+
+      .hud-pill {
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-family: monospace;
+        font-size: 13px;
+        padding: 6px 14px;
+        border-radius: 20px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .hud-pill.visible {
+        opacity: 1;
+      }
     </style>
   </head>
 
   <body>
+    <div id="hud-container"></div>
+
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
+      renderer="colorManagement: true; physicallyCorrectLights: true"
       vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
+        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
         <a-asset-item
-          id="bearModel"
+          id="astroModel"
           src="./assets/Astronaut.glb"
         ></a-asset-item>
-        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="cam"></a-camera>
+      <a-camera
+        id="cam"
+        position="0 0 0"
+        look-controls="enabled: false"
+      ></a-camera>
 
       <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
       <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
     </a-scene>
 
     <script>
-      const PERSIST_MS = 10000;
-      const SCALE = 1.0;
+      // =========================================================
+      // SETTINGS
+      // =========================================================
+
+      const DISPLAY_SCALE = 1.0;
+
+      // how long before same target can scan again
+      const RESCAN_COOLDOWN_MS = 10000;
+
+      // =========================================================
 
       const configs = [
-        { targetId: "target0", src: "#horseModel" },
-        { targetId: "target1", src: "#bearModel" },
+        {
+          targetId: "target0",
+          src: "#horseModel",
+          label: "Horse",
+        },
+        {
+          targetId: "target1",
+          src: "#astroModel",
+          label: "Astronaut",
+        },
       ];
 
+      const hudContainer = document.getElementById("hud-container");
+
+      function makeHud() {
+        const pill = document.createElement("div");
+        pill.className = "hud-pill";
+        hudContainer.appendChild(pill);
+
+        return {
+          show(text) {
+            pill.textContent = text;
+            pill.classList.add("visible");
+          },
+          hide() {
+            pill.classList.remove("visible");
+          },
+        };
+      }
+
       document.querySelector("a-scene").addEventListener("loaded", () => {
-        const scene = document.querySelector("a-scene");
-        const camera = document.getElementById("cam");
+        const sceneEl = document.querySelector("a-scene");
 
-        configs.forEach(({ targetId, src }) => {
-          const target = document.getElementById(targetId);
+        configs.forEach((cfg) => {
+          const targetEl = document.getElementById(cfg.targetId);
 
-          const model = document.createElement("a-gltf-model");
-          model.setAttribute("src", src);
-          model.setAttribute("animation-mixer", "");
-          model.setAttribute("visible", "false");
-          scene.appendChild(model);
+          const hud = makeHud();
 
-          let state = "idle"; // idle | tracking | lost
-          let lastPose = {
-            pos: new THREE.Vector3(),
-            quat: new THREE.Quaternion(),
-          };
+          // =====================================================
+          // PERSISTENT WORLD MODEL
+          // =====================================================
 
-          let lostTimer = null;
+          const cloneEl = document.createElement("a-gltf-model");
 
-          function capturePose() {
-            target.object3D.getWorldPosition(lastPose.pos);
-            target.object3D.getWorldQuaternion(lastPose.quat);
+          cloneEl.setAttribute("src", cfg.src);
+          cloneEl.setAttribute("animation-mixer", "");
+          cloneEl.setAttribute("visible", "false");
+
+          sceneEl.appendChild(cloneEl);
+
+          // =====================================================
+          // STATE
+          // =====================================================
+
+          let cooldown = false;
+
+          // =====================================================
+          // PLACE MODEL ONCE
+          // =====================================================
+
+          function placeModel() {
+            const pos = new THREE.Vector3();
+            const quat = new THREE.Quaternion();
+
+            targetEl.object3D.getWorldPosition(pos);
+            targetEl.object3D.getWorldQuaternion(quat);
+
+            // freeze world transform
+            cloneEl.object3D.position.copy(pos);
+            cloneEl.object3D.quaternion.copy(quat);
+
+            cloneEl.object3D.scale.set(
+              DISPLAY_SCALE,
+              DISPLAY_SCALE,
+              DISPLAY_SCALE,
+            );
+
+            cloneEl.setAttribute("visible", "true");
           }
 
-          function applyPose() {
-            model.object3D.position.copy(lastPose.pos);
+          // =====================================================
+          // TARGET FOUND
+          // =====================================================
 
-            const camQuat = new THREE.Quaternion();
-            camera.object3D.getWorldQuaternion(camQuat);
+          targetEl.addEventListener("targetFound", () => {
+            // ignore rescans during cooldown
+            if (cooldown) return;
 
-            model.object3D.quaternion.copy(camQuat.multiply(lastPose.quat));
+            cooldown = true;
 
-            model.object3D.scale.set(SCALE, SCALE, SCALE);
-          }
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                placeModel();
 
-          function updateLoop() {
-            if (state === "tracking") {
-              capturePose();
-              applyPose();
-              requestAnimationFrame(updateLoop);
-            }
+                hud.show(`${cfg.label} placed`);
 
-            if (state === "lost") {
-              applyPose();
-              requestAnimationFrame(updateLoop);
-            }
-          }
+                setTimeout(() => {
+                  hud.hide();
+                }, 1500);
+              });
+            });
 
-          target.addEventListener("targetFound", () => {
-            state = "tracking";
-            model.setAttribute("visible", "true");
-
-            if (lostTimer) {
-              clearTimeout(lostTimer);
-              lostTimer = null;
-            }
-
-            capturePose();
-            updateLoop();
+            // unlock rescan later
+            setTimeout(() => {
+              cooldown = false;
+            }, RESCAN_COOLDOWN_MS);
           });
 
-          target.addEventListener("targetLost", () => {
-            state = "lost";
+          // =====================================================
+          // IMPORTANT:
+          // DO NOTHING ON targetLost
+          // =====================================================
 
-            lostTimer = setTimeout(() => {
-              model.setAttribute("visible", "false");
-              state = "idle";
-            }, PERSIST_MS);
-
-            updateLoop();
+          targetEl.addEventListener("targetLost", () => {
+            // intentionally empty
+            // model remains permanently
+            // no hiding
+            // no reset
           });
         });
       });
