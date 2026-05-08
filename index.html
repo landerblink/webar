@@ -49,49 +49,5 @@
         </a-gltf-model>
       </a-entity>
     </a-scene>
-    <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const target0 = document.querySelector(
-      '[mindar-image-target="targetIndex: 0"]'
-    );
-
-    const target1 = document.querySelector(
-      '[mindar-image-target="targetIndex: 1"]'
-    );
-
-    let timeout0;
-    let timeout1;
-
-    // TARGET 0
-    target0.addEventListener("targetFound", () => {
-      clearTimeout(timeout0);
-
-      target0.object3D.visible = true;
-    });
-
-    target0.addEventListener("targetLost", () => {
-      clearTimeout(timeout0);
-
-      timeout0 = setTimeout(() => {
-        target0.object3D.visible = false;
-      }, 10000); // 10 seconds
-    });
-
-    // TARGET 1
-    target1.addEventListener("targetFound", () => {
-      clearTimeout(timeout1);
-
-      target1.object3D.visible = true;
-    });
-
-    target1.addEventListener("targetLost", () => {
-      clearTimeout(timeout1);
-
-      timeout1 = setTimeout(() => {
-        target1.object3D.visible = false;
-      }, 10000); // 10 seconds
-    });
-  });
-</script>
   </body>
 </html>
