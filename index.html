@@ -1,140 +1,53 @@
 <!doctype html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
-
-    <title>MindAR Persistent Model</title>
-
-    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
-    <!-- Animation Mixer -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
-
-    <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-    <style>
-      html,
-      body {
-        margin: 0;
-        padding: 0;
-        overflow: hidden;
-        width: 100%;
-        height: 100%;
-        background: #000;
-      }
-
-      a-scene {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-      }
-
-      canvas {
-        width: 100% !important;
-        height: 100% !important;
-      }
-    </style>
   </head>
 
   <body>
     <a-scene
-      mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2;"
+      mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
       color-space="sRGB"
-      renderer="colorManagement: true; physicallyCorrectLights: true"
+      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <!-- LIGHTS -->
-      <a-light type="ambient" intensity="1"></a-light>
-
-      <a-light type="directional" position="0 1 1" intensity="1"></a-light>
-
-      <!-- ASSETS -->
       <a-assets>
         <a-asset-item
-          id="astronautModel"
+          id="bearModel"
           src="./assets/Astronaut.glb"
         ></a-asset-item>
 
-        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
+        <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
-      <!-- CAMERA -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- IMAGE TARGETS -->
-      <a-entity mindar-image-target="targetIndex: 0" id="target0"></a-entity>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-gltf-model
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#raccoonModel"
+          animation-mixer
+        >
+        </a-gltf-model>
+      </a-entity>
 
-      <a-entity mindar-image-target="targetIndex: 1" id="target1"></a-entity>
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-gltf-model
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#bearModel"
+          animation-mixer
+        >
+        </a-gltf-model>
+      </a-entity>
     </a-scene>
-
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const scene = document.querySelector("a-scene");
-
-        const target0 = document.querySelector("#target0");
-        const target1 = document.querySelector("#target1");
-
-        let spawned0 = false;
-        let spawned1 = false;
-
-        // =========================
-        // TARGET 0 -> HORSE
-        // =========================
-        target0.addEventListener("targetFound", () => {
-          if (spawned0) return;
-
-          const model = document.createElement("a-gltf-model");
-
-          model.setAttribute("src", "#horseModel");
-
-          // Bigger scale
-          model.setAttribute("scale", "0.2 0.2 0.2");
-
-          // Place in front of user
-          model.setAttribute("position", "0 0 -2");
-
-          model.setAttribute("rotation", "0 0 0");
-
-          model.setAttribute("animation-mixer", "");
-
-          scene.appendChild(model);
-
-          spawned0 = true;
-        });
-
-        // =========================
-        // TARGET 1 -> ASTRONAUT
-        // =========================
-        target1.addEventListener("targetFound", () => {
-          if (spawned1) return;
-
-          const model = document.createElement("a-gltf-model");
-
-          model.setAttribute("src", "#astronautModel");
-
-          model.setAttribute("scale", "0.2 0.2 0.2");
-
-          model.setAttribute("position", "0 0 -2");
-
-          model.setAttribute("rotation", "0 0 0");
-
-          model.setAttribute("animation-mixer", "");
-
-          scene.appendChild(model);
-
-          spawned1 = true;
-        });
-      });
-    </script>
   </body>
 </html>
