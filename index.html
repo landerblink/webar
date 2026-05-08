@@ -6,198 +6,48 @@
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-    <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-      }
-
-      #hud-container {
-        position: fixed;
-        bottom: 24px;
-        left: 0;
-        right: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        pointer-events: none;
-        z-index: 999;
-      }
-
-      .hud-pill {
-        background: rgba(0,0,0,0.65);
-        color: white;
-        font-family: monospace;
-        font-size: 13px;
-        padding: 5px 14px;
-        border-radius: 20px;
-        opacity: 0;
-        transition: opacity 0.3s;
-      }
-
-      .hud-pill.visible {
-        opacity: 1;
-      }
-    </style>
   </head>
 
   <body>
-    <div id="hud-container"></div>
-
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
-      embedded
     >
-
       <a-assets>
         <a-asset-item
-          id="astronautModel"
-          src="./assets/Astronaut.glb">
-        </a-asset-item>
+          id="bearModel"
+          src="./assets/Astronaut.glb"
+        ></a-asset-item>
 
-        <a-asset-item
-          id="horseModel"
-          src="./assets/Horse.glb">
-        </a-asset-item>
+        <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera
-        id="camera"
-        position="0 0 0"
-        look-controls="enabled: false">
-      </a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- IMAGE TARGETS -->
-      <a-entity
-        id="target0"
-        mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-gltf-model
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#raccoonModel"
+          animation-mixer
+        >
+        </a-gltf-model>
       </a-entity>
 
-      <a-entity
-        id="target1"
-        mindar-image-target="targetIndex: 1">
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-gltf-model
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#bearModel"
+          animation-mixer
+        >
+        </a-gltf-model>
       </a-entity>
-
     </a-scene>
-
-    <script>
-      const DISPLAY_SCALE = 1.0;
-
-      const configs = [
-        {
-          targetId: "target0",
-          modelSrc: "#horseModel",
-          label: "Horse"
-        },
-        {
-          targetId: "target1",
-          modelSrc: "#astronautModel",
-          label: "Astronaut"
-        }
-      ];
-
-      const hudContainer = document.getElementById("hud-container");
-
-      function createHud(label) {
-        const pill = document.createElement("div");
-        pill.className = "hud-pill";
-        hudContainer.appendChild(pill);
-
-        return {
-          show(msg) {
-            pill.textContent = msg;
-            pill.classList.add("visible");
-          },
-          hide() {
-            pill.classList.remove("visible");
-          }
-        };
-      }
-
-      document.querySelector("a-scene").addEventListener("loaded", () => {
-
-        const sceneEl = document.querySelector("a-scene");
-
-        configs.forEach(config => {
-
-          const targetEl = document.getElementById(config.targetId);
-
-          const hud = createHud(config.label);
-
-          // Create persistent world model
-          const modelEl = document.createElement("a-gltf-model");
-
-          modelEl.setAttribute("src", config.modelSrc);
-          modelEl.setAttribute("animation-mixer", "");
-          modelEl.setAttribute("visible", "false");
-
-          sceneEl.appendChild(modelEl);
-
-          // IMPORTANT:
-          // Once placed, NEVER move again
-          let placed = false;
-
-          targetEl.addEventListener("targetFound", () => {
-
-            // already placed permanently
-            if (placed) return;
-
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-
-                const pos = new THREE.Vector3();
-                const quat = new THREE.Quaternion();
-
-                targetEl.object3D.getWorldPosition(pos);
-                targetEl.object3D.getWorldQuaternion(quat);
-
-                // Place permanently in world
-                modelEl.object3D.position.copy(pos);
-                modelEl.object3D.quaternion.copy(quat);
-
-                modelEl.object3D.scale.set(
-                  DISPLAY_SCALE,
-                  DISPLAY_SCALE,
-                  DISPLAY_SCALE
-                );
-
-                modelEl.setAttribute("visible", "true");
-
-                placed = true;
-
-                hud.show(`${config.label} anchored`);
-
-                // optional hide HUD after 2 sec
-                setTimeout(() => {
-                  hud.hide();
-                }, 2000);
-
-              });
-            });
-
-          });
-
-          // IMPORTANT:
-          // DO NOTHING on targetLost
-          // model stays forever
-
-          targetEl.addEventListener("targetLost", () => {
-            hud.show(`${config.label} persistent`);
-
-            setTimeout(() => {
-              hud.hide();
-            }, 1000);
-          });
-
-        });
-
-      });
-    </script>
   </body>
 </html>
