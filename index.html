@@ -2,44 +2,28 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      html, body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-      }
-
-      a-scene {
-        position: fixed;
-        inset: 0;
-        width: 100vw;
-        height: 100vh;
-      }
-
       #hud {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0,0,0,0.6);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
         font-family: monospace;
-        font-size: 13px;
+        font-size: 14px;
+        padding: 6px 16px;
+        border-radius: 20px;
+        pointer-events: none;
         opacity: 0;
-        transition: 0.2s;
+        transition: opacity 0.3s;
+        z-index: 999;
       }
-
-      #hud.show {
-        opacity: 1;
-      }
+      #hud.visible { opacity: 1; }
     </style>
   </head>
 
@@ -47,117 +31,176 @@
     <div id="hud"></div>
 
     <a-scene
-      id="scene"
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
       <a-assets>
-        <a-asset-item id="bearModel" src="./assets/Astronaut.glb"></a-asset-item>
-        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
+        <a-asset-item id="bearModel"    src="./assets/Astronaut.glb"></a-asset-item>
+        <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
-      <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
+      <!--
+        Tracker entities: these stay parented to the MindAR targets.
+        We keep them visible=false — their only job is to provide the
+        world matrix when a target is found. The WORLD-LOCKED copies
+        (created at runtime below) are what the user actually sees.
+      -->
+      <a-entity id="target0" mindar-image-target="targetIndex: 0">
+        <a-gltf-model
+          id="model0"
+          visible="false"
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#raccoonModel"
+        ></a-gltf-model>
+      </a-entity>
+
+      <a-entity id="target1" mindar-image-target="targetIndex: 1">
+        <a-gltf-model
+          id="model1"
+          visible="false"
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#bearModel"
+        ></a-gltf-model>
+      </a-entity>
+
     </a-scene>
 
     <script>
-      // WAIT UNTIL AFRAME IS READY
-      window.addEventListener("load", () => {
-        const scene = document.querySelector("a-scene");
-        const hud = document.getElementById("hud");
+      const PERSIST_MS = 10000; // ms the model stays visible after losing the target
 
-        const target0 = document.querySelector("#target0");
-        const target1 = document.querySelector("#target1");
+      // ── HUD helpers ────────────────────────────────────────────────────────────
+      const hud = document.getElementById('hud');
+      let hudInterval = null;
 
-        let model0, model1;
-        let timer0, timer1;
+      function showHud(msg) {
+        hud.textContent = msg;
+        hud.classList.add('visible');
+      }
+      function hideHud() {
+        hud.classList.remove('visible');
+        if (hudInterval) { clearInterval(hudInterval); hudInterval = null; }
+      }
 
-        function show(msg) {
-          hud.textContent = msg;
-          hud.classList.add("show");
-        }
+      // ── Config ─────────────────────────────────────────────────────────────────
+      const configs = [
+        { targetId: 'target0', trackerId: 'model0', src: '#raccoonModel' },
+        { targetId: 'target1', trackerId: 'model1', src: '#bearModel'    },
+      ];
 
-        function hide() {
-          hud.classList.remove("show");
-        }
+      // ── Main setup ─────────────────────────────────────────────────────────────
+      /*
+       * Strategy — "ghost + world clone":
+       *
+       * The tracker model (child of MindAR target) stays invisible; it only
+       * exists so we can read its world transform each frame the target is active.
+       *
+       * A separate "world clone" entity is a direct child of <a-scene>. While the
+       * target is tracked, every animation frame we copy the tracker's world
+       * position/rotation into the clone so it snaps to the target exactly once —
+       * on the first frame after targetFound. From that moment on the clone sits
+       * still in world space even when the camera moves away.
+       *
+       * On targetLost we start the 10 s hide timer. If targetFound fires again
+       * within that window the timer is cancelled and the clone's position is
+       * refreshed to wherever the target is now.
+       */
 
-        function spawnModel(target, modelId, src, timerRef) {
-          let model = document.createElement("a-gltf-model");
+      document.querySelector('a-scene').addEventListener('loaded', () => {
+        const sceneEl = document.querySelector('a-scene');
 
-          model.setAttribute("src", src);
-          model.setAttribute("scale", "0.2 0.2 0.2");
-          model.setAttribute("animation-mixer", "");
+        configs.forEach(({ targetId, trackerId, src }) => {
+          const targetEl  = document.getElementById(targetId);
+          const trackerEl = document.getElementById(trackerId);
 
-          scene.appendChild(model);
+          // --- Build the world-locked clone entity ---
+          const cloneEl = document.createElement('a-gltf-model');
+          cloneEl.setAttribute('src', src);
+          cloneEl.setAttribute('animation-mixer', '');
+          cloneEl.setAttribute('visible', 'false');
+          // No position/rotation/scale here — we'll set them from world coords
+          sceneEl.appendChild(cloneEl);
 
-          // LOCK WORLD POSITION
-          setTimeout(() => {
-            const pos = new THREE.Vector3();
-            target.object3D.getWorldPosition(pos);
+          // Per-target state
+          let hideTimer   = null;
+          let countdownId = null;
+          let isLocked    = false; // true once we've placed the clone in world space
 
-            model.object3D.position.copy(pos);
-          }, 0);
-
-          return model;
-        }
-
-        // TARGET 0
-        target0.addEventListener("targetFound", () => {
-          clearTimeout(timer0);
-          hide();
-
-          if (!model0) {
-            model0 = spawnModel(target0, "m0", "#horseModel");
+          function cancelHide() {
+            if (hideTimer)   { clearTimeout(hideTimer);    hideTimer   = null; }
+            if (countdownId) { clearInterval(countdownId); countdownId = null; }
+            hideHud();
           }
-        });
 
-        target0.addEventListener("targetLost", () => {
-          let t = 10;
-          show(`Model hides in ${t}s`);
+          function bakeWorldTransform() {
+            /**
+             * Copy the tracker's current world transform into the clone.
+             * The clone is a child of <a-scene> whose local space == world space,
+             * so we can assign world values directly.
+             */
+            const pos   = new THREE.Vector3();
+            const quat  = new THREE.Quaternion();
+            const scale = new THREE.Vector3();
 
-          const interval = setInterval(() => {
-            t--;
-            show(`Model hides in ${t}s`);
-            if (t <= 0) clearInterval(interval);
-          }, 1000);
+            trackerEl.object3D.getWorldPosition(pos);
+            trackerEl.object3D.getWorldQuaternion(quat);
+            trackerEl.object3D.getWorldScale(scale);
 
-          timer0 = setTimeout(() => {
-            if (model0) model0.setAttribute("visible", false);
-            hide();
-            clearInterval(interval);
-          }, 10000);
-        });
-
-        // TARGET 1
-        target1.addEventListener("targetFound", () => {
-          clearTimeout(timer1);
-          hide();
-
-          if (!model1) {
-            model1 = spawnModel(target1, "m1", "#bearModel");
+            cloneEl.object3D.position.copy(pos);
+            cloneEl.object3D.quaternion.copy(quat);
+            cloneEl.object3D.scale.copy(scale);
           }
-        });
 
-        target1.addEventListener("targetLost", () => {
-          let t = 10;
-          show(`Model hides in ${t}s`);
+          // ── targetFound ──────────────────────────────────────────────────────
+          targetEl.addEventListener('targetFound', () => {
+            cancelHide();
 
-          const interval = setInterval(() => {
-            t--;
-            show(`Model hides in ${t}s`);
-            if (t <= 0) clearInterval(interval);
-          }, 1000);
+            // Wait two rAFs so Three.js world matrices are fully updated
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                bakeWorldTransform();
+                cloneEl.setAttribute('visible', 'true');
+                isLocked = true;
+              });
+            });
+          });
 
-          timer1 = setTimeout(() => {
-            if (model1) model1.setAttribute("visible", false);
-            hide();
-            clearInterval(interval);
-          }, 10000);
-        });
-      });
+          // ── targetLost ───────────────────────────────────────────────────────
+          targetEl.addEventListener('targetLost', () => {
+            if (!isLocked) return;
+            if (hideTimer) return; // already counting down
+
+            let remaining = Math.round(PERSIST_MS / 1000);
+            showHud(`Model locked · hiding in ${remaining}s`);
+
+            countdownId = setInterval(() => {
+              remaining--;
+              if (remaining > 0) {
+                showHud(`Model locked · hiding in ${remaining}s`);
+              } else {
+                clearInterval(countdownId);
+                countdownId = null;
+              }
+            }, 1000);
+
+            hideTimer = setTimeout(() => {
+              cloneEl.setAttribute('visible', 'false');
+              isLocked  = false;
+              hideTimer = null;
+              hideHud();
+            }, PERSIST_MS);
+          });
+
+        }); // forEach
+      }); // loaded
     </script>
   </body>
 </html>
