@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -8,7 +8,7 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
     />
 
-    <title>MindAR Stable AR</title>
+    <title>MindAR Fix Camera</title>
 
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
@@ -45,34 +45,19 @@
 
   <body>
     <a-scene
-      mindar-image="
-        imageTargetSrc: ./assets/targets.mind;
-        autoStart: true;
-        maxTrack: 2;
-        filterMinCF: 0.001;
-        filterBeta: 0.01;
-      "
-      color-space="sRGB"
-      renderer="colorManagement: true; physicallyCorrectLights: true"
+      id="scene"
+      mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
+      renderer="colorManagement: true; physicallyCorrectLights: true"
     >
       <!-- LIGHTS -->
       <a-light type="ambient" intensity="1"></a-light>
-
-      <a-light
-        type="directional"
-        intensity="1"
-        position="0 1 1"
-      ></a-light>
+      <a-light type="directional" position="0 1 1" intensity="1"></a-light>
 
       <!-- ASSETS -->
       <a-assets>
-        <a-asset-item
-          id="horseModel"
-          src="./assets/Horse.glb"
-        ></a-asset-item>
-
+        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
         <a-asset-item
           id="astronautModel"
           src="./assets/Astronaut.glb"
@@ -80,90 +65,36 @@
       </a-assets>
 
       <!-- CAMERA -->
-      <a-camera
-        position="0 0 0"
-        look-controls="enabled: false"
-      ></a-camera>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- TARGET 0 -->
-      <a-entity
-        id="target0"
-        mindar-image-target="targetIndex: 0"
-      >
+      <!-- TARGETS -->
+      <a-entity id="target0" mindar-image-target="targetIndex: 0">
         <a-gltf-model
-          id="model0"
           src="#horseModel"
-          position="0 0 0"
-          rotation="0 0 0"
           scale="0.2 0.2 0.2"
           animation-mixer
-          visible="false"
-        >
-        </a-gltf-model>
+        ></a-gltf-model>
       </a-entity>
 
-      <!-- TARGET 1 -->
-      <a-entity
-        id="target1"
-        mindar-image-target="targetIndex: 1"
-      >
+      <a-entity id="target1" mindar-image-target="targetIndex: 1">
         <a-gltf-model
-          id="model1"
           src="#astronautModel"
-          position="0 0 0"
-          rotation="0 0 0"
           scale="0.2 0.2 0.2"
           animation-mixer
-          visible="false"
-        >
-        </a-gltf-model>
+        ></a-gltf-model>
       </a-entity>
     </a-scene>
 
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        const target0 = document.querySelector("#target0");
-        const target1 = document.querySelector("#target1");
+      window.addEventListener("load", async () => {
+        const scene = document.querySelector("#scene");
 
-        const model0 = document.querySelector("#model0");
-        const model1 = document.querySelector("#model1");
+        // IMPORTANT: manually start MindAR (fixes black camera)
+        const system = scene.systems["mindar-image-system"];
 
-        let timeout0;
-        let timeout1;
-
-        // =========================
-        // TARGET 0
-        // =========================
-        target0.addEventListener("targetFound", () => {
-          clearTimeout(timeout0);
-
-          model0.setAttribute("visible", true);
-        });
-
-        target0.addEventListener("targetLost", () => {
-          clearTimeout(timeout0);
-
-          timeout0 = setTimeout(() => {
-            model0.setAttribute("visible", false);
-          }, 10000);
-        });
-
-        // =========================
-        // TARGET 1
-        // =========================
-        target1.addEventListener("targetFound", () => {
-          clearTimeout(timeout1);
-
-          model1.setAttribute("visible", true);
-        });
-
-        target1.addEventListener("targetLost", () => {
-          clearTimeout(timeout1);
-
-          timeout1 = setTimeout(() => {
-            model1.setAttribute("visible", false);
-          }, 10000);
-        });
+        if (system && system.start) {
+          await system.start();
+        }
       });
     </script>
   </body>
