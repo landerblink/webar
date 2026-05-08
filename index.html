@@ -11,40 +11,30 @@
       body {
         margin: 0;
         overflow: hidden;
+        background: #000;
       }
 
-      #hud-container {
+      #hud {
         position: fixed;
-        bottom: 24px;
-        left: 0;
-        right: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        pointer-events: none;
-        z-index: 999;
-      }
-
-      .hud-pill {
-        background: rgba(0, 0, 0, 0.7);
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
         color: white;
+        padding: 10px 16px;
+        border-radius: 999px;
         font-family: monospace;
-        font-size: 13px;
-        padding: 6px 14px;
-        border-radius: 20px;
-        opacity: 0;
-        transition: opacity 0.3s;
-      }
-
-      .hud-pill.visible {
-        opacity: 1;
+        font-size: 14px;
+        z-index: 999;
       }
     </style>
   </head>
 
   <body>
-    <div id="hud-container"></div>
+
+    <div id="hud">
+      Scan image target
+    </div>
 
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
@@ -52,158 +42,134 @@
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
+
       <a-assets>
-        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
         <a-asset-item
-          id="astroModel"
-          src="./assets/Astronaut.glb"
-        ></a-asset-item>
+          id="astronautModel"
+          src="./assets/Astronaut.glb">
+        </a-asset-item>
+
+        <a-asset-item
+          id="horseModel"
+          src="./assets/Horse.glb">
+        </a-asset-item>
       </a-assets>
 
       <a-camera
-        id="cam"
+        id="camera"
         position="0 0 0"
-        look-controls="enabled: false"
-      ></a-camera>
+        look-controls="enabled: false">
+      </a-camera>
 
-      <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
-      <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
+      <!-- IMAGE TARGETS -->
+      <a-entity
+        id="target0"
+        mindar-image-target="targetIndex: 0">
+      </a-entity>
+
+      <a-entity
+        id="target1"
+        mindar-image-target="targetIndex: 1">
+      </a-entity>
+
     </a-scene>
 
     <script>
-      // =========================================================
-      // SETTINGS
-      // =========================================================
+      const hud = document.getElementById("hud");
 
-      const DISPLAY_SCALE = 1.0;
-
-      // how long before same target can scan again
-      const RESCAN_COOLDOWN_MS = 10000;
-
-      // =========================================================
+      // prevents immediate re-trigger
+      const RELOCK_DELAY_MS = 10000;
 
       const configs = [
         {
           targetId: "target0",
-          src: "#horseModel",
+          modelSrc: "#horseModel",
           label: "Horse",
+          scale: 1.2
         },
         {
           targetId: "target1",
-          src: "#astroModel",
+          modelSrc: "#astronautModel",
           label: "Astronaut",
-        },
+          scale: 1.0
+        }
       ];
 
-      const hudContainer = document.getElementById("hud-container");
-
-      function makeHud() {
-        const pill = document.createElement("div");
-        pill.className = "hud-pill";
-        hudContainer.appendChild(pill);
-
-        return {
-          show(text) {
-            pill.textContent = text;
-            pill.classList.add("visible");
-          },
-          hide() {
-            pill.classList.remove("visible");
-          },
-        };
-      }
-
       document.querySelector("a-scene").addEventListener("loaded", () => {
+
         const sceneEl = document.querySelector("a-scene");
 
-        configs.forEach((cfg) => {
-          const targetEl = document.getElementById(cfg.targetId);
+        configs.forEach((config) => {
 
-          const hud = makeHud();
+          const targetEl = document.getElementById(config.targetId);
 
-          // =====================================================
-          // PERSISTENT WORLD MODEL
-          // =====================================================
-
-          const cloneEl = document.createElement("a-gltf-model");
-
-          cloneEl.setAttribute("src", cfg.src);
-          cloneEl.setAttribute("animation-mixer", "");
-          cloneEl.setAttribute("visible", "false");
-
-          sceneEl.appendChild(cloneEl);
-
-          // =====================================================
-          // STATE
-          // =====================================================
-
+          let locked = false;
           let cooldown = false;
 
-          // =====================================================
-          // PLACE MODEL ONCE
-          // =====================================================
-
-          function placeModel() {
-            const pos = new THREE.Vector3();
-            const quat = new THREE.Quaternion();
-
-            targetEl.object3D.getWorldPosition(pos);
-            targetEl.object3D.getWorldQuaternion(quat);
-
-            // freeze world transform
-            cloneEl.object3D.position.copy(pos);
-            cloneEl.object3D.quaternion.copy(quat);
-
-            cloneEl.object3D.scale.set(
-              DISPLAY_SCALE,
-              DISPLAY_SCALE,
-              DISPLAY_SCALE,
-            );
-
-            cloneEl.setAttribute("visible", "true");
-          }
-
-          // =====================================================
-          // TARGET FOUND
-          // =====================================================
-
           targetEl.addEventListener("targetFound", () => {
-            // ignore rescans during cooldown
+
+            // already placed
+            if (locked) return;
+
+            // cooldown active
             if (cooldown) return;
 
-            cooldown = true;
-
+            // wait 2 frames for stable tracking
             requestAnimationFrame(() => {
               requestAnimationFrame(() => {
-                placeModel();
 
-                hud.show(`${cfg.label} placed`);
+                const pos = new THREE.Vector3();
+                const quat = new THREE.Quaternion();
 
-                setTimeout(() => {
-                  hud.hide();
-                }, 1500);
+                targetEl.object3D.getWorldPosition(pos);
+                targetEl.object3D.getWorldQuaternion(quat);
+
+                // CREATE MODEL
+                const modelEl = document.createElement("a-gltf-model");
+
+                modelEl.setAttribute("src", config.modelSrc);
+                modelEl.setAttribute("animation-mixer", "");
+                modelEl.setAttribute("position", pos);
+
+                modelEl.object3D.quaternion.copy(quat);
+
+                modelEl.setAttribute(
+                  "scale",
+                  `${config.scale} ${config.scale} ${config.scale}`
+                );
+
+                sceneEl.appendChild(modelEl);
+
+                locked = true;
+
+                hud.innerHTML =
+                  `${config.label} placed in world`;
+
+                console.log(config.label, "PLACED");
               });
             });
 
-            // unlock rescan later
-            setTimeout(() => {
-              cooldown = false;
-            }, RESCAN_COOLDOWN_MS);
           });
 
-          // =====================================================
           // IMPORTANT:
-          // DO NOTHING ON targetLost
-          // =====================================================
+          // we DO NOTHING on targetLost
+          // model remains permanently in world
 
           targetEl.addEventListener("targetLost", () => {
-            // intentionally empty
-            // model remains permanently
-            // no hiding
-            // no reset
+
+            // prevent instant retrigger spam
+            cooldown = true;
+
+            setTimeout(() => {
+              cooldown = false;
+            }, RELOCK_DELAY_MS);
+
           });
+
         });
+
       });
     </script>
+
   </body>
 </html>
