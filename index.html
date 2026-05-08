@@ -1,101 +1,53 @@
 <!doctype html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"
-    />
-
-    <title>MindAR Fix Camera</title>
-
-    <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-
-    <!-- Extras -->
     <script src="https://cdn.jsdelivr.net/gh/donmccurdy/aframe-extras@v7.0.0/dist/aframe-extras.min.js"></script>
-
-    <!-- MindAR -->
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-    <style>
-      html,
-      body {
-        margin: 0;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: black;
-      }
-
-      a-scene {
-        position: fixed !important;
-        inset: 0;
-        width: 100vw !important;
-        height: 100vh !important;
-      }
-
-      canvas {
-        width: 100% !important;
-        height: 100% !important;
-      }
-    </style>
   </head>
 
   <body>
     <a-scene
-      id="scene"
-      mindar-image="imageTargetSrc: ./assets/targets.mind; autoStart: false;"
+      mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
-      renderer="colorManagement: true; physicallyCorrectLights: true"
     >
-      <!-- LIGHTS -->
-      <a-light type="ambient" intensity="1"></a-light>
-      <a-light type="directional" position="0 1 1" intensity="1"></a-light>
-
-      <!-- ASSETS -->
       <a-assets>
-        <a-asset-item id="horseModel" src="./assets/Horse.glb"></a-asset-item>
         <a-asset-item
-          id="astronautModel"
+          id="bearModel"
           src="./assets/Astronaut.glb"
         ></a-asset-item>
+
+        <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
-      <!-- CAMERA -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- TARGETS -->
-      <a-entity id="target0" mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target="targetIndex: 0">
         <a-gltf-model
-          src="#horseModel"
-          scale="0.2 0.2 0.2"
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#raccoonModel"
           animation-mixer
-        ></a-gltf-model>
+        >
+        </a-gltf-model>
       </a-entity>
 
-      <a-entity id="target1" mindar-image-target="targetIndex: 1">
+      <a-entity mindar-image-target="targetIndex: 1">
         <a-gltf-model
-          src="#astronautModel"
-          scale="0.2 0.2 0.2"
+          rotation="0 0 0"
+          position="0 -0.25 0"
+          scale="0.05 0.05 0.05"
+          src="#bearModel"
           animation-mixer
-        ></a-gltf-model>
+        >
+        </a-gltf-model>
       </a-entity>
     </a-scene>
-
-    <script>
-      window.addEventListener("load", async () => {
-        const scene = document.querySelector("#scene");
-
-        // IMPORTANT: manually start MindAR (fixes black camera)
-        const system = scene.systems["mindar-image-system"];
-
-        if (system && system.start) {
-          await system.start();
-        }
-      });
-    </script>
   </body>
 </html>
