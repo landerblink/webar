@@ -8,7 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
     <style>
-      body { margin: 0; overflow: hidden; }
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
 
       #hud-container {
         position: fixed;
@@ -24,7 +27,7 @@
       }
 
       .hud-pill {
-        background: rgba(0,0,0,0.65);
+        background: rgba(0, 0, 0, 0.65);
         color: #fff;
         font-family: monospace;
         font-size: 13px;
@@ -45,135 +48,133 @@
 
     <a-scene
       mindar-image="imageTargetSrc: ./assets/targets.mind; maxTrack: 2"
-      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-
       <a-assets>
-        <a-asset-item id="bearModel" src="./assets/Astronaut.glb"></a-asset-item>
+        <a-asset-item
+          id="bearModel"
+          src="./assets/Astronaut.glb"
+        ></a-asset-item>
         <a-asset-item id="raccoonModel" src="./assets/Horse.glb"></a-asset-item>
       </a-assets>
 
-      <a-camera id="cam" position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-camera id="cam" position="0 0 0"></a-camera>
 
       <a-entity id="target0" mindar-image-target="targetIndex: 0"></a-entity>
       <a-entity id="target1" mindar-image-target="targetIndex: 1"></a-entity>
-
     </a-scene>
 
     <script>
-      const LOST_GRACE_MS = 2500; // 👈 stability fix (important)
-      const DISPLAY_SCALE = 1.0;   // adjust size here
+      const PERSIST_MS = 10000;
+      const SCALE = 1.0;
 
       const configs = [
-        { targetId: 'target0', src: '#raccoonModel', label: 'Horse' },
-        { targetId: 'target1', src: '#bearModel', label: 'Astronaut' },
+        { targetId: "target0", src: "#raccoonModel", label: "Horse" },
+        { targetId: "target1", src: "#bearModel", label: "Astronaut" },
       ];
 
-      const hudContainer = document.getElementById('hud-container');
+      const hudContainer = document.getElementById("hud-container");
 
       function makeHud(label) {
-        const pill = document.createElement('div');
-        pill.className = 'hud-pill';
+        const pill = document.createElement("div");
+        pill.className = "hud-pill";
         hudContainer.appendChild(pill);
 
         return {
           show(msg) {
             pill.textContent = msg;
-            pill.classList.add('visible');
+            pill.classList.add("visible");
           },
           hide() {
-            pill.classList.remove('visible');
-          }
+            pill.classList.remove("visible");
+          },
         };
       }
 
-      document.querySelector('a-scene').addEventListener('loaded', () => {
-        const sceneEl = document.querySelector('a-scene');
-        const cameraEl = document.getElementById('cam');
+      document.querySelector("a-scene").addEventListener("loaded", () => {
+        const sceneEl = document.querySelector("a-scene");
+        const cameraEl = document.getElementById("cam");
 
         configs.forEach(({ targetId, src, label }) => {
-
           const targetEl = document.getElementById(targetId);
           const hud = makeHud(label);
 
-          const cloneEl = document.createElement('a-gltf-model');
-          cloneEl.setAttribute('src', src);
-          cloneEl.setAttribute('animation-mixer', '');
-          cloneEl.setAttribute('visible', 'false');
+          const model = document.createElement("a-gltf-model");
+          model.setAttribute("src", src);
+          model.setAttribute("animation-mixer", "");
+          model.setAttribute("visible", "false");
 
-          sceneEl.appendChild(cloneEl);
+          sceneEl.appendChild(model);
 
-          let isPlaced = false;
-          let lostTimeout = null;
+          let isVisible = false;
+          let lastSeenTime = 0;
 
-          function placeClone() {
-            const pos = new THREE.Vector3();
-            const quat = new THREE.Quaternion();
+          // LAST KNOWN POSITION STORAGE (KEY FIX)
+          const lastPose = {
+            position: new THREE.Vector3(),
+            quaternion: new THREE.Quaternion(),
+          };
 
-            targetEl.object3D.getWorldPosition(pos);
-            targetEl.object3D.getWorldQuaternion(quat);
+          function updatePose() {
+            targetEl.object3D.getWorldPosition(lastPose.position);
+            targetEl.object3D.getWorldQuaternion(lastPose.quaternion);
+          }
 
-            cloneEl.object3D.position.copy(pos);
+          function applyPose() {
+            model.object3D.position.copy(lastPose.position);
 
             const camQuat = new THREE.Quaternion();
             cameraEl.object3D.getWorldQuaternion(camQuat);
 
-            cloneEl.object3D.quaternion.copy(camQuat.multiply(quat));
-
-            cloneEl.object3D.scale.set(
-              DISPLAY_SCALE,
-              DISPLAY_SCALE,
-              DISPLAY_SCALE
+            model.object3D.quaternion.copy(
+              camQuat.multiply(lastPose.quaternion),
             );
+
+            model.object3D.scale.set(SCALE, SCALE, SCALE);
           }
 
-          function liveUpdate() {
-            if (!isPlaced) return;
-            placeClone();
-            requestAnimationFrame(liveUpdate);
-          }
-
-          targetEl.addEventListener('targetFound', () => {
-
-            // cancel any pending hide
-            if (lostTimeout) {
-              clearTimeout(lostTimeout);
-              lostTimeout = null;
+          function loop() {
+            if (isVisible) {
+              applyPose();
+              requestAnimationFrame(loop);
             }
+          }
 
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
+          targetEl.addEventListener("targetFound", () => {
+            isVisible = true;
+            lastSeenTime = Date.now();
 
-                placeClone();
-                cloneEl.setAttribute('visible', 'true');
-                isPlaced = true;
+            model.setAttribute("visible", "true");
 
-                hud.show(`${label} · tracking`);
+            updatePose();
+            hud.show(`${label} · tracking`);
 
-                liveUpdate();
-              });
-            });
+            loop();
           });
 
-          targetEl.addEventListener('targetLost', () => {
-            if (!isPlaced) return;
+          targetEl.addEventListener("targetLost", () => {
+            hud.show(`${label} · keeping position`);
 
-            hud.show(`${label} · tracking lost`);
+            const check = () => {
+              const elapsed = Date.now() - lastSeenTime;
 
-            if (lostTimeout) clearTimeout(lostTimeout);
+              if (elapsed > PERSIST_MS) {
+                model.setAttribute("visible", "false");
+                isVisible = false;
+                hud.hide();
+                return;
+              }
 
-            lostTimeout = setTimeout(() => {
-              cloneEl.setAttribute('visible', 'false');
-              isPlaced = false;
-              lostTimeout = null;
-              hud.hide();
-            }, LOST_GRACE_MS);
+              // still keep model frozen in last known position
+              applyPose();
+
+              requestAnimationFrame(check);
+            };
+
+            requestAnimationFrame(check);
           });
-
         });
-
       });
     </script>
   </body>
